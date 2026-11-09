@@ -520,10 +520,10 @@
     {
       id: "susceptibilidad",
       name: "Susceptibilidad",
-      desc: RASTER.susceptibilidad ? "Random Forest · 250 m" : "Modelo en procesamiento",
+      desc: "Riesgo por departamento · análisis de focos",
       color: "#ff5a3c",
-      kind: "raster",
-      available: !!RASTER.susceptibilidad,
+      kind: "riesgo",
+      available: true,
     },
     { id: "focos", name: "Focos de calor", desc: "MODIS + VIIRS · por año", color: "#ff3b30", kind: "focos", available: true },
     { id: "bosques", name: "Bosques", desc: "ESA WorldCover · referencia", color: "#2e9e4f", kind: "raster", available: !!RASTER.bosque },
@@ -531,7 +531,6 @@
     { id: "areas", name: "Áreas protegidas", desc: "WDPA · " + fmt((D.areas_puntos || []).length) + " áreas", color: "#a855f7", kind: "areas", available: true },
     { id: "quemadas", name: "Áreas quemadas", desc: "MCD64A1 · por año", color: "#f97316", kind: "quemadas", available: true },
     { id: "deptos", name: "Departamentos", desc: "FAO GAUL · " + fmt((D.departamentos_puntos || []).length), color: "#e2e8f0", kind: "deptos", available: true },
-    { id: "ausencias", name: "Pseudo-ausencias", desc: "Muestra de entrenamiento", color: "#22d3ee", kind: "ausencias", available: true },
   ];
 
   let map = null;
@@ -598,7 +597,7 @@
     groups.ausencias = L.layerGroup();
     groups.bosques = makeRaster(RASTER.bosque, 0.62);
     groups.agua = makeRaster(RASTER.agua, 0.78);
-    groups.susceptibilidad = makeRaster(RASTER.susceptibilidad, 0.72);
+    groups.susceptibilidad = L.layerGroup();
     groups.firms = L.layerGroup();
     groups.firmsWms = L.tileLayer.wms(GIBS_WMS_URL, {
       layers: GIBS_LAYER,
@@ -610,7 +609,7 @@
       className: "firms-wms",
     });
 
-    ["deptos", "areas", "focos", "quemadas", "ausencias"].forEach((id) => {
+    ["deptos", "areas", "focos", "quemadas"].forEach((id) => {
       if (groups[id]) groups[id].addTo(map);
     });
     searchGroup.addTo(map);
@@ -1785,6 +1784,7 @@
     const layer = LAYERS.find((l) => l.id === id);
     if (!layer || !layer.available) return;
     state.layers[id] = !!on;
+    if (id === "susceptibilidad") renderCloropleta();
     const group = groups[id];
     if (group) {
       if (on) {
@@ -1962,6 +1962,8 @@
     if (state.query || state.category !== "todas") runSearch({ silent: true });
     updateLegend();
     refreshQuickQr();
+    if (capaActiva("susceptibilidad")) renderCloropleta();
+    if (deptoSeleccionado) actualizarInfoDepto();
     if (opts.mark) checkReq("anio");
     if (opts.toastIt) {
       Toast.success(
@@ -2460,15 +2462,17 @@
       Toast.info("Categoría", chip.textContent.trim(), "cat");
     });
 
-    els.reqReset.addEventListener("click", () => {
-      reqState = {};
-      reqCompleteShown = false;
-      saveReq();
-      updateReqUI();
-      muteReq = true;
-      Toast.info("Checklist restablecido", "Puedes volver a verificar los requisitos.", "reqReset");
-      muteReq = false;
-    });
+    if (els.reqReset) {
+      els.reqReset.addEventListener("click", () => {
+        reqState = {};
+        reqCompleteShown = false;
+        saveReq();
+        updateReqUI();
+        muteReq = true;
+        Toast.info("Checklist restablecido", "Puedes volver a verificar los requisitos.", "reqReset");
+        muteReq = false;
+      });
+    }
 
     els.openPdf.addEventListener("click", () => openModal("pdf"));
     els.openJpg.addEventListener("click", () => openModal("jpg"));
@@ -4353,7 +4357,7 @@
     $$("#studyTabs button").forEach(function (btn) {
       btn.classList.toggle("active", btn.dataset.stab === tab);
     });
-    const panes = { integral: "paneIntegral", informe: "paneInforme", igac: "paneIgac", qr: "paneQr" };
+    const panes = { integral: "paneIntegral", informe: "paneInforme", igac: "paneIgac", qr: "paneQr", riesgo: "paneRiesgo" };
     Object.keys(panes).forEach(function (key) {
       const pane = document.getElementById(panes[key]);
       if (pane) pane.classList.toggle("active", key === tab);
@@ -4366,6 +4370,8 @@
       drawIgacTab();
     } else if (tab === "qr") {
       renderQrTab();
+    } else if (tab === "riesgo") {
+      renderRiesgo();
     } else {
       refreshIntegral();
     }
@@ -4774,7 +4780,230 @@
     }
   }
 
-  /* ------------------------------- Init --------------------------------- */
+  /* ==========================================================================
+     FASE Riesgo · Susceptibilidad real, departamentos y emergencias
+     ========================================================================== */
+
+  // Capital y número de municipios por departamento (valores aproximados).
+  const INFO_DEPARTAMENTOS = {
+    "Amazonas": { capital: "Leticia", municipios: 11 },
+    "Antioquia": { capital: "Medellín", municipios: 125 },
+    "Arauca": { capital: "Arauca", municipios: 7 },
+    "Atlantico": { capital: "Barranquilla", municipios: 23 },
+    "Bolivar": { capital: "Cartagena", municipios: 46 },
+    "Boyaca": { capital: "Tunja", municipios: 123 },
+    "Buenaventura": { capital: "Buenaventura", municipios: 1 },
+    "Caldas": { capital: "Manizales", municipios: 27 },
+    "Caqueta": { capital: "Florencia", municipios: 16 },
+    "Casanare": { capital: "Yopal", municipios: 19 },
+    "Cauca": { capital: "Popayán", municipios: 42 },
+    "Cesar": { capital: "Valledupar", municipios: 25 },
+    "Choco": { capital: "Quibdó", municipios: 30 },
+    "Cordoba": { capital: "Montería", municipios: 30 },
+    "Cundinamarca": { capital: "Bogotá", municipios: 116 },
+    "Guainia": { capital: "Inírida", municipios: 9 },
+    "Guajira": { capital: "Riohacha", municipios: 15 },
+    "Guaviare": { capital: "San José del Guaviare", municipios: 4 },
+    "Huila": { capital: "Neiva", municipios: 37 },
+    "Magdalena": { capital: "Santa Marta", municipios: 30 },
+    "Meta": { capital: "Villavicencio", municipios: 29 },
+    "Narino": { capital: "Pasto", municipios: 64 },
+    "Norte De Santander": { capital: "Cúcuta", municipios: 40 },
+    "Putumayo": { capital: "Mocoa", municipios: 13 },
+    "Quindio": { capital: "Armenia", municipios: 12 },
+    "Risaralda": { capital: "Pereira", municipios: 14 },
+    "San Andres Y Providencia": { capital: "San Andrés", municipios: 2 },
+    "Santander": { capital: "Bucaramanga", municipios: 87 },
+    "Sucre": { capital: "Sincelejo", municipios: 26 },
+    "Tolima": { capital: "Ibagué", municipios: 47 },
+    "Valle Del Cauca": { capital: "Cali", municipios: 42 },
+    "Vaupes": { capital: "Mitú", municipios: 6 },
+    "Vichada": { capital: "Puerto Carreño", municipios: 4 },
+  };
+
+  // Líneas nacionales de emergencia (aplican en todo el territorio).
+  const EMERGENCIAS = [
+    { nombre: "Bomberos", numero: "119", icono: "bombero" },
+    { nombre: "Policía Nacional", numero: "123", icono: "policia" },
+    { nombre: "Cruz Roja", numero: "132", icono: "cruzroja" },
+    { nombre: "Defensa Civil", numero: "144", icono: "defensa" },
+    { nombre: "Ambulancias", numero: "125", icono: "ambulancia" },
+  ];
+
+  let deptoSeleccionado = "";
+
+  function calcularRiesgoDeptos() {
+    const conteo = {};
+    (D.departamentos_puntos || []).forEach(function (d) {
+      conteo[d.nombre] = { focos: 0, quemadas: 0 };
+    });
+    focosDeAnio(state.year).forEach(function (f) {
+      if (conteo[f.depto]) conteo[f.depto].focos++;
+    });
+    quemadasDeAnio(state.year).forEach(function (q) {
+      if (conteo[q.depto]) conteo[q.depto].quemadas++;
+    });
+    // Focos en vivo (NASA FIRMS) si están cargados.
+    if (state.firms && state.firms.active && state.firms.points) {
+      state.firms.points.forEach(function (p) {
+        if (p.depto && conteo[p.depto]) conteo[p.depto].focos++;
+      });
+    }
+    let max = 1;
+    Object.keys(conteo).forEach(function (n) {
+      max = Math.max(max, conteo[n].focos + conteo[n].quemadas);
+    });
+    const resultado = {};
+    Object.keys(conteo).forEach(function (n) {
+      const c = conteo[n];
+      const total = c.focos + c.quemadas;
+      resultado[n] = {
+        focos: c.focos,
+        quemadas: c.quemadas,
+        total: total,
+        riesgo: Math.round((total / max) * 100),
+      };
+    });
+    return resultado;
+  }
+
+  function colorRiesgo(pct) {
+    if (pct <= 0) return "#1a9850";
+    if (pct < 25) return "#a6d96a";
+    if (pct < 50) return "#ffffbf";
+    if (pct < 75) return "#fdae61";
+    return "#d73027";
+  }
+
+  function renderCloropleta() {
+    const group = groups.susceptibilidad;
+    if (!group) return;
+    group.clearLayers();
+    const riesgo = calcularRiesgoDeptos();
+    if (D.departamentos) {
+      L.geoJSON(sinPuntos(D.departamentos), {
+        style: function (feature) {
+          const nombre = (feature.properties || {}).nombre;
+          const r = riesgo[nombre] || { riesgo: 0 };
+          return {
+            color: colorRiesgo(r.riesgo),
+            weight: 1,
+            opacity: 0.9,
+            fillColor: colorRiesgo(r.riesgo),
+            fillOpacity: 0.55,
+          };
+        },
+        pointToLayer: function (latlng) {
+          return L.circleMarker(latlng, { radius: 0, opacity: 0, fillOpacity: 0, interactive: false });
+        },
+        onEachFeature: function (feature, layer) {
+          const nombre = (feature.properties || {}).nombre;
+          const r = riesgo[nombre] || { riesgo: 0, focos: 0, quemadas: 0 };
+          layer.bindTooltip(
+            (prettyDepto(nombre) || "—") + " · riesgo " + r.riesgo + "%",
+            { sticky: true, className: "map-tooltip" }
+          );
+        },
+      }).addTo(group);
+    }
+  }
+
+  function renderRiesgo() {
+    const cont = document.getElementById("paneRiesgoBody");
+    if (!cont) return;
+    const riesgo = calcularRiesgoDeptos();
+    const lista = Object.keys(riesgo).map(function (n) {
+      return { nombre: n, r: riesgo[n] };
+    }).sort(function (a, b) { return b.r.riesgo - a.r.riesgo; });
+    cont.innerHTML =
+      '<div class="risk-summary">' +
+        "<span>Año " + (state.year == null ? "todos" : state.year) + "</span>" +
+        "<span>" + lista.length + " departamentos analizados</span>" +
+      "</div>" +
+      '<div class="risk-rows">' +
+      lista.map(function (item) {
+        const info = INFO_DEPARTAMENTOS[item.nombre] || {};
+        return (
+          '<div class="risk-row">' +
+            '<div class="risk-bar" style="width:' + item.r.riesgo + '%"></div>' +
+            '<div class="risk-row-head">' +
+              "<strong>" + esc(prettyDepto(item.nombre) || item.nombre) + "</strong>" +
+              "<b>" + item.r.riesgo + "%</b>" +
+            "</div>" +
+            '<div class="risk-row-meta">' +
+              (info.capital ? "Capital: " + esc(info.capital) + " · " : "") +
+              item.r.focos + " focos · " + item.r.quemadas + " quemadas" +
+            "</div>" +
+          "</div>"
+        );
+      }).join("") +
+      "</div>";
+  }
+
+  function enfocarDepto(nombre) {
+    const feat = (D.departamentos && D.departamentos.features || []).find(function (f) {
+      return (f.properties || {}).nombre === nombre;
+    });
+    if (!feat || !map) return;
+    try {
+      const b = L.geoJSON(feat).getBounds();
+      if (b && b.isValid()) map.fitBounds(b, { padding: [28, 28], animate: true });
+    } catch (e) { /* geometría inválida */ }
+  }
+
+  function actualizarInfoDepto() {
+    const info = document.getElementById("deptoInfo");
+    const pill = document.getElementById("deptoPill");
+    if (pill) pill.textContent = deptoSeleccionado ? prettyDepto(deptoSeleccionado) : "Nacional";
+    if (!info) return;
+    if (!deptoSeleccionado) {
+      info.innerHTML = '<p class="hint">Selecciona un departamento para enfocar el mapa y ver capital, municipios y riesgo.</p>';
+      return;
+    }
+    const d = INFO_DEPARTAMENTOS[deptoSeleccionado] || {};
+    const riesgo = calcularRiesgoDeptos();
+    const r = riesgo[deptoSeleccionado] || { focos: 0, quemadas: 0, riesgo: 0 };
+    info.innerHTML =
+      '<div class="depto-card">' +
+        '<div class="depto-card-title">' + esc(prettyDepto(deptoSeleccionado)) + "</div>" +
+        '<div class="depto-kpis">' +
+          '<div><b>' + esc(d.capital || "—") + "</b><small>Capital</small></div>" +
+          '<div><b>' + (d.municipios != null ? d.municipios : "—") + "</b><small>Municipios</small></div>" +
+          '<div><b>' + r.riesgo + '%</b><small>Riesgo</small></div>' +
+        "</div>" +
+        '<div class="depto-meta">' + r.focos + " focos · " + r.quemadas + " quemadas (año " +
+          (state.year == null ? "todos" : state.year) + ")</div>" +
+      "</div>";
+    const pillEmerg = document.getElementById("emergencyDepto");
+    if (pillEmerg) pillEmerg.textContent = prettyDepto(deptoSeleccionado);
+  }
+
+  function initDepartamentos() {
+    const sel = document.getElementById("deptoSelect");
+    if (sel) {
+      const nombres = (D.departamentos_puntos || []).map(function (d) { return d.nombre; }).sort();
+      sel.innerHTML = '<option value="">— Todo Colombia —</option>' +
+        nombres.map(function (n) {
+          return '<option value="' + esc(n) + '">' + esc(prettyDepto(n) || n) + "</option>";
+        }).join("");
+      sel.addEventListener("change", function () {
+        deptoSeleccionado = sel.value;
+        if (deptoSeleccionado) {
+          enfocarDepto(deptoSeleccionado);
+        } else {
+          map.fitBounds(BOUNDS, { padding: [26, 26], animate: true });
+        }
+        actualizarInfoDepto();
+      });
+    }
+    actualizarInfoDepto();
+  }
+
+  function initRiesgo() {
+    renderCloropleta();
+  }
+
+
   function init() {
     if (typeof L === "undefined") {
       document.body.innerHTML =
@@ -4801,12 +5030,13 @@
     initMap();
     renderDeptos();
     renderAreas();
-    renderAusencias();
     initUI();
     initStudy();
     initGeo();
     initFirms();
     initQuickQr();
+    initDepartamentos();
+    initRiesgo();
     setYear(state.year, { silent: true, toastIt: false });
     updateLegend();
     updateMapEmpty();
@@ -4818,7 +5048,7 @@
     } else {
       hideLoader();
     }
-    setTimeout(hideLoader, 4000); // red de seguridad
+    setTimeout(hideLoader, 10000); // máximo 10 s de pantalla de carga
 
     // Enlaces directos para compartir una vista:
     //   ?year=2024&cat=focos&q=Parques%20Nacionales&fit=1
@@ -4866,20 +5096,12 @@
   }
 
   /* -------------------------- Pantalla de carga -------------------------- */
-  // Duración mínima de la pantalla de carga: permanece visible al menos
-  // 15 segundos aunque el mapa termine de cargar antes.
-  const LOADER_MIN_MS = 15000;
-  const LOADER_START = Date.now();
+  // Duración máxima: la pantalla se oculta en cuanto el mapa queda listo y,
+  // en cualquier caso, nunca después de 10 segundos.
+  const LOADER_MAX_MS = 10000;
   let loaderHidden = false;
-  let loaderMinTimer = null;
 
   function hideLoader() {
-    if (loaderHidden) return;
-    const restante = Math.max(0, LOADER_MIN_MS - (Date.now() - LOADER_START));
-    if (restante > 0) {
-      if (!loaderMinTimer) loaderMinTimer = setTimeout(ocultarLoader, restante);
-      return;
-    }
     ocultarLoader();
   }
 
@@ -4893,6 +5115,8 @@
       if (loader.parentNode) loader.parentNode.removeChild(loader);
     }, 650);
   }
+  // Red de seguridad: nunca mostrar la pantalla de carga más de 10 s.
+  setTimeout(ocultarLoader, LOADER_MAX_MS);
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);

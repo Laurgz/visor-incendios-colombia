@@ -141,6 +141,18 @@
           <div class="layer-list" id="layerList"></div>
         </section>
 
+        <!-- Departamentos -->
+        <section class="card" aria-labelledby="deptoTitle">
+          <div class="section-head">
+            <h2 id="deptoTitle">Departamentos</h2>
+            <span class="pill neutral" id="deptoPill">Nacional</span>
+          </div>
+          <select id="deptoSelect" class="depto-select" aria-label="Seleccionar departamento">
+            <option value="">— Todo Colombia —</option>
+          </select>
+          <div class="depto-info" id="deptoInfo"></div>
+        </section>
+
         <!-- NASA FIRMS en vivo -->
         <section class="card firms-card" aria-labelledby="firmsTitle">
           <div class="section-head">
@@ -211,17 +223,6 @@
           <p class="hint" style="margin:8px 4px 0;">La lista centra el mapa en el resultado seleccionado. No se añaden viñetas ni pines sobre el territorio.</p>
         </section>
 
-        <!-- Checklist -->
-        <section class="card" aria-labelledby="reqTitle">
-          <div class="section-head">
-            <h2 id="reqTitle">Requisitos del visor</h2>
-            <span class="pill neutral" id="reqProgress">0/6</span>
-          </div>
-          <div class="progress" aria-hidden="true"><span id="reqBar"></span></div>
-          <ul class="req-list" id="reqList"></ul>
-          <button type="button" class="link-btn" id="reqReset">Restablecer checklist</button>
-        </section>
-
         <!-- Centro de estudio -->
         <section class="card study-hub" aria-labelledby="studyHubTitle">
           <div class="section-head">
@@ -261,6 +262,22 @@
             </button>
           </div>
           <p class="hint">Mapa e informe se exportan como documentos independientes y solo incluyen las capas activas. El QR comparte la vista actual.</p>
+        </section>
+
+        <!-- Emergencias -->
+        <section class="card emergency-card" aria-labelledby="emergencyTitle">
+          <div class="section-head">
+            <h2 id="emergencyTitle">Números de emergencia</h2>
+            <span class="pill neutral" id="emergencyDepto">Colombia</span>
+          </div>
+          <ul class="emergency-list" id="emergencyList">
+            <li><span class="em-ico bombero" aria-hidden="true"></span><div><strong>Bomberos</strong><small>119</small></div></li>
+            <li><span class="em-ico policia" aria-hidden="true"></span><div><strong>Policía Nacional</strong><small>123</small></div></li>
+            <li><span class="em-ico cruzroja" aria-hidden="true"></span><div><strong>Cruz Roja</strong><small>132</small></div></li>
+            <li><span class="em-ico defensa" aria-hidden="true"></span><div><strong>Defensa Civil</strong><small>144</small></div></li>
+            <li><span class="em-ico ambulancia" aria-hidden="true"></span><div><strong>Ambulancias</strong><small>125</small></div></li>
+          </ul>
+          <p class="hint">Líneas nacionales de emergencia disponibles en todo el territorio colombiano.</p>
         </section>
 
         <!-- Sincronización local-first -->
@@ -450,6 +467,7 @@
         <button type="button" data-stab="informe">Informe</button>
         <button type="button" data-stab="igac">Mapa IGAC</button>
         <button type="button" data-stab="qr">Código QR</button>
+        <button type="button" data-stab="riesgo">Riesgo</button>
       </nav>
 
       <div class="modal-body study-body" id="studyBody">
@@ -584,6 +602,18 @@
                 <button type="button" class="btn ghost small" id="qrSyncNow">Sincronizar ahora</button>
               </div>
             </div>
+          </div>
+        </section>
+
+        <!-- RIESGO -->
+        <section class="pane study-pane" id="paneRiesgo">
+          <div class="risk-stage">
+            <div class="risk-head">
+              <span class="eyebrow">Análisis de susceptibilidad</span>
+              <h3>Probabilidad de incendio por departamento</h3>
+              <p>Riesgo calculado a partir de los focos de calor y áreas quemadas reales del año seleccionado.</p>
+            </div>
+            <div class="risk-body" id="paneRiesgoBody"></div>
           </div>
         </section>
       </div>

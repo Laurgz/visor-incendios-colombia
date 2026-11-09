@@ -4023,3 +4023,206 @@ input[type="range"]::-moz-range-thumb {
     animation: none;
   }
 }
+
+/* ==========================================================================
+   Departamentos, emergencias y análisis de riesgo
+   ========================================================================== */
+.depto-select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  background: rgba(8, 13, 23, 0.55);
+  color: var(--text);
+  font-size: 11px;
+}
+
+.depto-select:focus {
+  border-color: rgba(255, 90, 60, 0.5);
+}
+
+.depto-info {
+  margin-top: 8px;
+}
+
+.depto-card {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(8, 13, 23, 0.45);
+}
+
+.depto-card-title {
+  margin-bottom: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.depto-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.depto-kpis div {
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.depto-kpis b {
+  display: block;
+  font-size: 13px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.depto-kpis small {
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.depto-meta {
+  margin-top: 7px;
+  font-size: 9.5px;
+  color: var(--muted);
+}
+
+/* Emergencias */
+.emergency-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.emergency-list li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(8, 13, 23, 0.4);
+}
+
+.emergency-list li div {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.emergency-list strong {
+  font-size: 10.5px;
+  color: var(--text);
+}
+
+.emergency-list small {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.em-ico {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.em-ico.bombero { background: #ef4444; }
+.em-ico.policia { background: #3b82f6; }
+.em-ico.cruzroja { background: #ef4444; border: 2px solid #fff; width: 7px; height: 7px; }
+.em-ico.defensa { background: #f59e0b; }
+.em-ico.ambulancia { background: #22c55e; }
+
+/* Análisis de riesgo (pestaña Riesgo) */
+.risk-stage {
+  padding: 4px 2px;
+}
+
+.risk-head {
+  margin-bottom: 12px;
+}
+
+.risk-head h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.risk-head p {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.risk-body {
+  min-height: 120px;
+}
+
+.risk-summary {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 10px;
+  font-size: 10px;
+  color: var(--muted-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.risk-rows {
+  display: grid;
+  gap: 8px;
+  max-height: 46vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.risk-row {
+  position: relative;
+  overflow: hidden;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(8, 13, 23, 0.45);
+}
+
+.risk-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, rgba(26, 152, 80, 0.26), rgba(215, 48, 39, 0.42));
+}
+
+.risk-row-head {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 2px;
+}
+
+.risk-row-head strong {
+  font-size: 11.5px;
+  color: var(--text);
+}
+
+.risk-row-head b {
+  font-size: 12px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.risk-row-meta {
+  position: relative;
+  font-size: 9px;
+  color: var(--muted-2);
+}

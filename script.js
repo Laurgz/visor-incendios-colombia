@@ -2743,7 +2743,7 @@
     if (capaActiva("areas")) partes.push("áreas protegidas de WDPA representadas como polígonos morados");
     if (capaActiva("deptos")) partes.push("límites departamentales de FAO GAUL");
     if (capaActiva("susceptibilidad")) {
-      partes.push("susceptibilidad estimada con Random Forest a 250 m");
+      partes.push("susceptibilidad por departamento calculada a partir de la densidad de focos de calor y áreas quemadas del periodo");
     }
     if (capaActiva("ausencias")) partes.push("pseudo-ausencias de la muestra de entrenamiento");
     if (state.firms && state.firms.active) partes.push("focos en vivo de NASA FIRMS con intensidad por FRP");
@@ -2764,7 +2764,7 @@
     if (capaActiva("agua")) claves.push("surface water");
     if (capaActiva("areas")) claves.push("wdpa");
     if (capaActiva("deptos")) claves.push("gaul");
-    if (capaActiva("susceptibilidad")) claves.push("srtm");
+    if (capaActiva("susceptibilidad")) { claves.push("firms"); claves.push("mcd64a1"); }
     if (!claves.length) return [];
     return fuentes.filter(function (fuente) {
       const texto = String(fuente).toLowerCase();
@@ -3143,6 +3143,25 @@
       resultados += tabla;
     }
     if (resultados) secciones.push({ title: "Resultados del periodo", html: resultados });
+
+    if (capaActiva("susceptibilidad")) {
+      const riesgo = calcularRiesgoDeptos();
+      const topRiesgo = Object.keys(riesgo).map(function (n) {
+        return { nombre: n, r: riesgo[n] };
+      }).sort(function (a, b) { return b.r.riesgo - a.r.riesgo; }).slice(0, 10);
+      const riesgoHTML =
+        '<p>La susceptibilidad a incendios forestales se estima a partir de la densidad de focos de calor ' +
+        'y áreas quemadas del periodo seleccionado, normalizada a una escala relativa de 0 a 100 %. El valor ' +
+        'representa la probabilidad relativa de incendio por departamento. Los departamentos con mayor ' +
+        'probabilidad de incendio son:</p>' +
+        '<table class="report-table"><thead><tr><th>Departamento</th><th>Focos</th><th>Quemadas</th><th>Riesgo</th></tr></thead><tbody>' +
+        (topRiesgo.map(function (item) {
+          return '<tr><td>' + esc(prettyDepto(item.nombre) || item.nombre) + '</td><td>' + fmt(item.r.focos) +
+            '</td><td>' + fmt(item.r.quemadas) + '</td><td><b>' + item.r.riesgo + ' %</b></td></tr>';
+        }).join("") || '<tr><td colspan="4">Sin registros para el periodo seleccionado.</td></tr>') +
+        '</tbody></table>';
+      secciones.push({ title: "Análisis de susceptibilidad", html: riesgoHTML });
+    }
 
     if (usaAreas) {
       secciones.push({
@@ -3661,7 +3680,7 @@
     const extras = [];
     if (capaActiva("focos")) extras.push("focos");
     if (state.firms && state.firms.active) extras.push("firms");
-    const alto = 30 + filas.length * 22 + extras.length * 18 + 30;
+    const alto = 30 + filas.length * 22 + extras.length * 18 + 30 + (capaActiva("susceptibilidad") ? 22 : 0);
     ctx.save();
     ctx.fillStyle = oscuro ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.95)";
     ctx.strokeStyle = oscuro ? "rgba(255,255,255,0.32)" : "#94a3b8";
@@ -3674,6 +3693,30 @@
     ctx.fillText("LEYENDA", x + 12, y + 20);
     let cursor = y + 38;
     filas.forEach(function (layer) {
+      if (layer.id === "susceptibilidad") {
+        const gx = x + 12;
+        const gw = Math.min(80, ancho - 70);
+        const gy = cursor - 9;
+        const gh = 10;
+        const grad = ctx.createLinearGradient(gx, 0, gx + gw, 0);
+        grad.addColorStop(0, "#1a9850");
+        grad.addColorStop(0.5, "#ffffbf");
+        grad.addColorStop(1, "#d73027");
+        ctx.fillStyle = grad;
+        ctx.fillRect(gx, gy, gw, gh);
+        ctx.strokeStyle = oscuro ? "rgba(255,255,255,0.55)" : "#1f2937";
+        ctx.strokeRect(gx, gy, gw, gh);
+        ctx.fillStyle = oscuro ? "#e2e8f0" : "#334155";
+        ctx.font = "11px Arial";
+        ctx.fillText("Susceptibilidad (riesgo)", gx + gw + 10, cursor);
+        cursor += 16;
+        ctx.font = "8px Arial";
+        ctx.fillStyle = oscuro ? "#cbd5e1" : "#64748b";
+        ctx.fillText("Baja", gx, cursor);
+        ctx.fillText("Alta", gx + gw - 14, cursor);
+        cursor += 16;
+        return;
+      }
       const punto = ["focos"].indexOf(layer.kind) >= 0;
       if (punto) {
         ctx.beginPath();
@@ -3923,7 +3966,18 @@
     }
     if (capaActiva("bosques")) dibujarRasterActivo("bosque", 0.62);
     if (capaActiva("agua")) dibujarRasterActivo("agua", 0.78);
-    if (capaActiva("susceptibilidad")) dibujarRasterActivo("susceptibilidad", 0.72);
+    if (capaActiva("susceptibilidad") && D.departamentos) {
+      const riesgoIgac = calcularRiesgoDeptos();
+      (D.departamentos.features || []).forEach(function (f) {
+        const nombre = (f.properties || {}).nombre;
+        const r = riesgoIgac[nombre] || { riesgo: 0 };
+        dibujarGeometria(ctx, f.geometry, proj, {
+          fill: colorRiesgo(r.riesgo),
+          stroke: "#1f2937",
+          width: 1,
+        });
+      });
+    }
 
     if (capaActiva("deptos") && D.departamentos) {
       dibujarFeatures(ctx, D.departamentos.features, proj, {

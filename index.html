@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#070b12">
+  <meta name="description" content="Visor nacional de incendios forestales en Colombia: capas conmutables, búsqueda por año y categoría, GPS en tiempo real, NASA FIRMS, QR para compartir, mapa e informe exportables de forma independiente y diseño 100% responsivo.">
+  <title>SUSCEPTIBILIDAD Incendios Colombia · Visor nacional 2012–2026</title>
+  <link rel="stylesheet" href="vendor/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="loader" class="loader" role="status" aria-label="Cargando visor">
+  <div class="loader-art" aria-hidden="true">
+    <svg viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="lgSky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0b1220"/>
+          <stop offset="0.62" stop-color="#1b2436"/>
+          <stop offset="1" stop-color="#3a1c20"/>
+        </linearGradient>
+        <radialGradient id="lgGlow" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stop-color="#ff7a3c" stop-opacity="0.6"/>
+          <stop offset="1" stop-color="#ff5a3c" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="lgFlame" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stop-color="#ff5a3c"/>
+          <stop offset="0.5" stop-color="#ff8a3c"/>
+          <stop offset="1" stop-color="#ffd166"/>
+        </linearGradient>
+        <linearGradient id="lgFlame2" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stop-color="#e03e22"/>
+          <stop offset="1" stop-color="#ffb04d"/>
+        </linearGradient>
+      </defs>
+
+      <rect x="0" y="0" width="360" height="220" fill="url(#lgSky)"/>
+      <ellipse class="loader-glow" cx="180" cy="190" rx="210" ry="80" fill="url(#lgGlow)"/>
+
+      <path d="M0 172 L66 108 L128 150 L196 94 L268 150 L360 112 L360 220 L0 220 Z" fill="#0a1119"/>
+      <path d="M0 198 L58 150 L120 180 L188 140 L258 184 L360 162 L360 220 L0 220 Z" fill="#05090f"/>
+
+      <g fill="#081019">
+        <path d="M40 172 L47 140 L54 172 Z"/>
+        <path d="M62 174 L68 148 L74 174 Z"/>
+        <path d="M116 172 L124 142 L132 172 Z"/>
+        <path d="M238 172 L246 142 L254 172 Z"/>
+        <path d="M262 174 L269 148 L276 174 Z"/>
+        <path d="M300 172 L308 142 L316 172 Z"/>
+      </g>
+
+      <circle class="loader-smoke" cx="152" cy="122" r="9" fill="#98a4bb"/>
+      <circle class="loader-smoke s2" cx="176" cy="114" r="7" fill="#98a4bb"/>
+      <circle class="loader-smoke s3" cx="128" cy="118" r="6" fill="#98a4bb"/>
+
+      <g transform="translate(122, 150) scale(1.12)">
+        <g class="loader-flame"><path d="M12 0 C16 6 17 11 17 16 A5 5 0 0 1 7 16 C7 11 8 6 12 0 Z" fill="url(#lgFlame)"/></g>
+      </g>
+      <g transform="translate(156, 142) scale(1.42)">
+        <g class="loader-flame fast"><path d="M12 0 C16 6 17 11 17 16 A5 5 0 0 1 7 16 C7 11 8 6 12 0 Z" fill="url(#lgFlame2)"/></g>
+      </g>
+      <g transform="translate(190, 152) scale(0.98)">
+        <g class="loader-flame slow"><path d="M12 0 C16 6 17 11 17 16 A5 5 0 0 1 7 16 C7 11 8 6 12 0 Z" fill="url(#lgFlame)"/></g>
+      </g>
+
+      <circle class="loader-ember" cx="152" cy="120" r="2.1" fill="#ffd166" style="--dx:7px"/>
+      <circle class="loader-ember e2" cx="176" cy="116" r="1.8" fill="#ff8a3c" style="--dx:-9px"/>
+      <circle class="loader-ember e3" cx="166" cy="122" r="2.3" fill="#ffd166" style="--dx:5px"/>
+      <circle class="loader-ember e4" cx="188" cy="118" r="1.6" fill="#ffb04d" style="--dx:-6px"/>
+    </svg>
+  </div>
+  <div class="loader-title">SUSCEPTIBILIDAD <span>Incendios Colombia</span></div>
+  <p class="loader-subtitle">Visor nacional · 2012–2026</p>
+  <div class="loader-credits">
+    <span>UNIVERSIDAD ECCI</span>
+    <span>LAURA RODRIGUEZ</span>
+    <span>TOMAS ALFONSO</span>
+  </div>
+</div>
+
+
+  <div id="app">
+    <!-- ============================ PANEL ============================ -->
+    <aside class="sidebar" id="sidebar" aria-label="Panel de control del visor">
+      <header class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2.8c2.6 3.7 5.2 6.5 5.2 10.3a5.2 5.2 0 0 1-10.4 0c0-2.3 1.2-4.3 3.1-6.4.4 1.7 1.1 2.7 2.1 3.4.6-2.3.3-4.7 0-7.3Z"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Incendios Colombia</h1>
+          <p>Visor nacional · 2012–2026</p>
+          <span class="brand-badge"><span class="dot"></span> Datos GEE</span>
+        </div>
+      </header>
+
+      <div class="sidebar-scroll">
+        <div class="status-strip" id="statusStrip">
+          <span class="dot"></span>
+          <span><strong id="statusTotal">—</strong> registros cargados</span>
+        </div>
+
+        <!-- Año -->
+        <section class="card" aria-labelledby="yearTitle">
+          <div class="section-head">
+            <h2 id="yearTitle">Año de análisis</h2>
+            <span class="pill" id="yearPill">2026</span>
+          </div>
+          <div class="year-top">
+            <strong id="yearValue">2026</strong>
+            <span>Focos y quemadas</span>
+          </div>
+          <input type="range" id="yearRange" min="2012" max="2026" step="1" value="2026" aria-label="Seleccionar año">
+          <div class="year-scale" id="yearScale"></div>
+          <div class="chips" id="yearChips">
+            <button type="button" class="chip" data-year="todos">Todos</button>
+            <button type="button" class="chip" data-year="2026">2026</button>
+            <button type="button" class="chip" data-year="2024">2024</button>
+            <button type="button" class="chip" data-year="2020">2020</button>
+            <button type="button" class="chip" data-year="2016">2016</button>
+            <button type="button" class="chip" data-year="2012">2012</button>
+          </div>
+          <div class="year-stats">
+            <div class="stat"><b id="statFocos">—</b><small>Focos</small></div>
+            <div class="stat"><b id="statQuemadas">—</b><small>Quemadas</small></div>
+            <div class="stat"><b id="statAreas">—</b><small>Áreas prot.</small></div>
+          </div>
+          <p class="hint">El año filtra focos de calor y áreas quemadas. Bosques, agua, áreas protegidas y departamentos son capas de referencia.</p>
+        </section>
+
+        <!-- Capas -->
+        <section class="card" aria-labelledby="layersTitle">
+          <div class="section-head">
+            <h2 id="layersTitle">Capas visibles</h2>
+            <div class="mini-actions">
+              <button type="button" id="layersAll">Todas</button>
+              <button type="button" id="layersNone">Ninguna</button>
+            </div>
+          </div>
+          <div class="layer-list" id="layerList"></div>
+        </section>
+
+        <!-- NASA FIRMS en vivo -->
+        <section class="card firms-card" aria-labelledby="firmsTitle">
+          <div class="section-head">
+            <h2 id="firmsTitle">NASA FIRMS · focos en vivo</h2>
+            <span class="pill neutral" id="firmsPill">Sin clave</span>
+          </div>
+          <p class="hint">Focos de calor satelitales con intensidad por FRP. Usa una MAP_KEY gratuita de NASA FIRMS o un GeoJSON propio.</p>
+          <div class="firms-form">
+            <label class="firms-field">MAP_KEY
+              <input id="firmsKey" type="password" placeholder="Pega tu MAP_KEY" autocomplete="off" spellcheck="false" aria-label="Clave MAP_KEY de NASA FIRMS">
+            </label>
+            <div class="firms-grid">
+              <label class="firms-field">Fuente
+                <select id="firmsSource" aria-label="Fuente satelital de NASA FIRMS">
+                  <option value="VIIRS_SNPP_NRT">VIIRS SNPP</option>
+                  <option value="VIIRS_NOAA20_NRT">VIIRS NOAA-20</option>
+                  <option value="MODIS_NRT">MODIS</option>
+                </select>
+              </label>
+              <label class="firms-field">Días
+                <select id="firmsDays" aria-label="Días hacia atrás">
+                  <option value="1">1 día</option>
+                  <option value="2">2 días</option>
+                  <option value="3" selected>3 días</option>
+                  <option value="5">5 días</option>
+                  <option value="7">7 días</option>
+                  <option value="10">10 días</option>
+                </select>
+              </label>
+            </div>
+            <label class="firms-field">GeoJSON alternativo (opcional)
+              <input id="firmsUrl" type="url" placeholder="https://…/focos.geojson" autocomplete="off" spellcheck="false" aria-label="URL de GeoJSON de focos">
+            </label>
+            <div class="firms-actions">
+              <button type="button" class="btn small primary" id="firmsLoad">Cargar focos</button>
+              <button type="button" class="btn ghost small" id="firmsClear">Quitar</button>
+              <button type="button" class="btn ghost small" id="firmsWms">Capa WMS</button>
+            </div>
+            <p class="firms-status" id="firmsStatus">Sin datos en vivo. Se usan los focos históricos del año.</p>
+            <a class="firms-help" href="https://firms.modaps.eosdis.nasa.gov/api/map_key/" target="_blank" rel="noopener">Obtener MAP_KEY gratuita ↗</a>
+          </div>
+        </section>
+
+        <!-- Búsqueda -->
+        <section class="card" aria-labelledby="searchTitle">
+          <div class="section-head">
+            <h2 id="searchTitle">Buscar</h2>
+            <span class="pill neutral" id="resultCount">0</span>
+          </div>
+          <div class="search-box" id="searchBox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m20 20-3.5-3.5"></path>
+            </svg>
+            <input id="searchInput" type="search" placeholder="Departamento, área, foco…" autocomplete="off" spellcheck="false" aria-label="Buscar en el visor">
+            <button type="button" class="clear-btn" id="searchClear" aria-label="Limpiar búsqueda">×</button>
+            <span class="spinner" aria-hidden="true"></span>
+          </div>
+          <div class="chips search-cats" id="categoryChips">
+            <button type="button" class="chip active" data-cat="todas">Todas</button>
+            <button type="button" class="chip" data-cat="departamentos">Departamentos</button>
+            <button type="button" class="chip" data-cat="areas">Áreas</button>
+            <button type="button" class="chip" data-cat="focos">Focos</button>
+            <button type="button" class="chip" data-cat="quemadas">Quemadas</button>
+          </div>
+          <div class="search-meta" id="searchMeta">Escribe o elige una categoría</div>
+          <ul class="results" id="results" aria-live="polite"></ul>
+          <p class="hint" style="margin:8px 4px 0;">La lista centra el mapa en el resultado seleccionado. No se añaden viñetas ni pines sobre el territorio.</p>
+        </section>
+
+        <!-- Checklist -->
+        <section class="card" aria-labelledby="reqTitle">
+          <div class="section-head">
+            <h2 id="reqTitle">Requisitos del visor</h2>
+            <span class="pill neutral" id="reqProgress">0/6</span>
+          </div>
+          <div class="progress" aria-hidden="true"><span id="reqBar"></span></div>
+          <ul class="req-list" id="reqList"></ul>
+          <button type="button" class="link-btn" id="reqReset">Restablecer checklist</button>
+        </section>
+
+        <!-- Centro de estudio -->
+        <section class="card study-hub" aria-labelledby="studyHubTitle">
+          <div class="section-head">
+            <h2 id="studyHubTitle">Centro de estudio</h2>
+            <span class="pill neutral">4 módulos</span>
+          </div>
+          <div class="study-hub-grid">
+            <button type="button" class="study-hub-btn" data-study-open="integral">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="4" rx="1.5"/><rect x="14" y="11" width="7" height="10" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
+              <span><strong>Vista integral</strong><small>KPIs, mapa e informe</small></span>
+            </button>
+            <button type="button" class="study-hub-btn" data-study-open="informe">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+              <span><strong>Informe técnico</strong><small>PDF independiente</small></span>
+            </button>
+            <button type="button" class="study-hub-btn" data-study-open="igac">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3 3 5v16l6-2 6 2 6-2V3l-6 2-6-2Z"/><path d="M9 3v16M15 5v16"/></svg>
+              <span><strong>Mapa IGAC</strong><small>Plano cartográfico</small></span>
+            </button>
+            <button type="button" class="study-hub-btn" data-study-open="qr">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 20h2M20 14h1"/></svg>
+              <span><strong>Código QR</strong><small>Compartir la vista</small></span>
+            </button>
+          </div>
+          <div class="study-hub-actions">
+            <button type="button" class="btn ghost small" id="hubExportReport">Informe PDF</button>
+            <button type="button" class="btn ghost small" id="hubExportMap">Mapa PDF</button>
+          </div>
+          <div class="doc-actions study-hub-docs">
+            <button type="button" class="btn ghost" id="openPdf">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
+              Ficha PDF
+            </button>
+            <button type="button" class="btn ghost" id="openJpg">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+              Mapa JPG
+            </button>
+          </div>
+          <p class="hint">Mapa e informe se exportan como documentos independientes y solo incluyen las capas activas. El QR comparte la vista actual.</p>
+        </section>
+
+        <!-- Sincronización local-first -->
+        <section class="card sync-card" aria-labelledby="syncTitle">
+          <div class="section-head">
+            <h2 id="syncTitle">Datos y sincronización</h2>
+            <span class="pill neutral" id="syncPill">En línea</span>
+          </div>
+          <div class="sync-row">
+            <span class="sync-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 .4-9 6 6 0 0 0-11.6 1.7A3.8 3.8 0 0 0 6.5 19h11Z"/><path d="m9 13 3 3 3-3"/></svg>
+            </span>
+            <span id="syncText">Todo guardado en este dispositivo</span>
+            <button type="button" class="mini-sync" id="btnSyncNow">Sincronizar</button>
+          </div>
+          <p class="hint">Modo offline: el informe y el checklist se guardan localmente y se sincronizan al recuperar la conexión.</p>
+        </section>
+      </div>
+
+      <footer class="sidebar-foot">
+        <span>GEE · Random Forest · Leaflet</span>
+        <span id="clock">—</span>
+      </footer>
+    </aside>
+
+    <!-- ============================= MAPA ============================= -->
+    <main class="map-wrap" aria-label="Mapa de Colombia">
+      <div id="map"></div>
+
+      <div class="map-topbar">
+        <button type="button" class="icon-btn menu-btn" id="btnMenu" title="Abrir panel" aria-label="Abrir panel">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div class="map-title">
+          <span class="pulse" aria-hidden="true"></span>
+          <strong>Colombia</strong>
+          <span id="mapTitleYear">· 2026</span>
+          <span class="net-chip" id="netChip" title="Estado de conexión"><span class="dot"></span><span id="netText">En línea</span></span>
+        </div>
+        <div class="map-actions">
+          <button type="button" class="icon-btn geo-btn" id="btnGeo" title="Mi ubicación en tiempo real" aria-label="Activar mi ubicación en tiempo real">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="5.2"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg>
+          </button>
+          <button type="button" class="icon-btn" id="btnBasemap" title="Cambiar mapa base" aria-label="Cambiar mapa base">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 18 9 5 9-5"/></svg>
+          </button>
+          <button type="button" class="icon-btn" id="btnReset" title="Centrar en Colombia" aria-label="Centrar en Colombia">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+          </button>
+          <button type="button" class="icon-btn" id="btnFullscreen" title="Pantalla completa" aria-label="Pantalla completa">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="year-banner" id="yearBanner" role="status"></div>
+
+      <div class="offline-bar" id="offlineBar" role="status">
+        <span class="offline-dot"></span>
+        <span id="offlineText">Sin conexión · trabajando en local</span>
+        <button type="button" id="offlineSync">Sincronizar</button>
+      </div>
+
+      <div class="map-kpis" id="mapKpis" aria-label="Indicadores del año">
+        <div><b id="kpiFocos">—</b><small>Focos</small></div>
+        <div><b id="kpiQuemadas">—</b><small>Quemadas</small></div>
+        <div><b id="kpiDeptos">—</b><small>Deptos.</small></div>
+      </div>
+
+      <div class="geo-panel hidden" id="geoPanel" role="region" aria-label="Mi ubicación y distancias en tiempo real">
+        <header class="geo-head">
+          <span class="geo-live" aria-hidden="true"></span>
+          <strong id="geoState">Mi ubicación</strong>
+          <button type="button" id="geoClose" aria-label="Ocultar panel de ubicación">×</button>
+        </header>
+        <div class="geo-coords" id="geoCoords">Buscando señal GPS…</div>
+        <div class="geo-metrics">
+          <div><small>Precisión</small><b id="geoAcc">—</b></div>
+          <div><small>Actualizado</small><b id="geoTime">—</b></div>
+        </div>
+        <div class="geo-near">
+          <button type="button" class="geo-near-row" id="geoNearestFoco" title="Centrar en el foco más cercano">
+            <span class="geo-near-ico foco" aria-hidden="true"></span>
+            <span class="geo-near-text"><small>Foco más cercano</small><b id="geoFocoMeta">—</b></span>
+            <span class="geo-near-dist" id="geoFocoDist">—</span>
+          </button>
+          <button type="button" class="geo-near-row" id="geoNearestQuemada" title="Centrar en el área quemada más cercana">
+            <span class="geo-near-ico quemada" aria-hidden="true"></span>
+            <span class="geo-near-text"><small>Área quemada más cercana</small><b id="geoQuemadaMeta">—</b></span>
+            <span class="geo-near-dist" id="geoQuemadaDist">—</span>
+          </button>
+        </div>
+        <div class="geo-actions">
+          <button type="button" class="btn ghost small" id="geoCenter">Centrar en mí</button>
+          <button type="button" class="btn ghost small" id="geoStop">Detener</button>
+        </div>
+      </div>
+
+      <button type="button" class="quick-qr-fab" id="btnQuickQr" title="QR para compartir esta vista" aria-label="Mostrar código QR para compartir">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M17 20h4M20 20v1"/></svg>
+      </button>
+
+      <div class="quick-qr-card hidden" id="quickQrCard" role="region" aria-label="Código QR para compartir la vista">
+        <header class="quick-qr-head">
+          <strong>Compartir esta vista</strong>
+          <button type="button" id="quickQrClose" aria-label="Cerrar QR">×</button>
+        </header>
+        <div class="quick-qr-canvas-wrap"><canvas id="quickQrCanvas" aria-label="Código QR de la vista actual"></canvas></div>
+        <small class="quick-qr-caption" id="quickQrCaption">Año 2026 · focos y quemadas</small>
+        <div class="quick-qr-actions">
+          <button type="button" id="quickQrCopy">Copiar enlace</button>
+          <button type="button" id="quickQrDownload">Descargar PNG</button>
+        </div>
+      </div>
+
+      <div class="map-legend" id="legend">
+        <div class="legend-head">
+          <strong>Leyenda</strong>
+          <button type="button" id="legendClose" aria-label="Cerrar leyenda">×</button>
+        </div>
+        <div id="legendBody"></div>
+      </div>
+
+      <div class="map-empty" id="mapEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 18 9 5 9-5"/></svg>
+        <strong>Activa una capa para empezar</strong>
+        <p>El visor está listo. Enciende focos, bosques, agua o áreas protegidas desde el panel.</p>
+        <button type="button" class="btn primary" id="btnActivate">Activar capas recomendadas</button>
+        <button type="button" class="btn ghost" id="btnDocsEmpty">Ver documentos del estudio</button>
+      </div>
+    </main>
+  </div>
+
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  <!-- ============================ TOASTS ============================ -->
+  <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- ============================= MODAL ============================ -->
+  <div class="modal" id="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-card">
+      <header class="modal-head">
+        <div>
+          <h2 id="modalTitle">Documentos del estudio</h2>
+          <p id="modalSub">Ficha técnica y vista previa del mapa nacional.</p>
+        </div>
+        <button type="button" class="modal-close" id="modalClose" aria-label="Cerrar documentos del estudio">×</button>
+      </header>
+      <nav class="modal-tabs" id="modalTabs" aria-label="Tipo de documento">
+        <button type="button" class="active" data-tab="pdf">Ficha técnica (PDF)</button>
+        <button type="button" data-tab="jpg">Mapa (JPG)</button>
+      </nav>
+      <div class="modal-body">
+        <div class="pane active" id="pdfPane">
+          <iframe id="pdfFrame" title="Ficha técnica en PDF"></iframe>
+        </div>
+        <div class="pane" id="jpgPane">
+          <img id="jpgImg" alt="Vista previa del mapa nacional de susceptibilidad a incendios">
+        </div>
+      </div>
+      <footer class="modal-foot">
+        <a class="btn primary" id="downloadAsset" href="#" download>Descargar PDF</a>
+        <button type="button" class="btn ghost" id="modalClose2">Cerrar</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ======================= ESTUDIO / INFORME / IGAC ======================= -->
+  <div class="modal study-modal" id="studyModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="studyTitle">
+    <div class="modal-backdrop" id="studyBackdrop"></div>
+    <div class="modal-card study-card">
+      <header class="modal-head study-head">
+        <div class="study-heading">
+          <span class="eyebrow">Centro de estudio · Colombia</span>
+          <h2 id="studyTitle">Informe, cartografía y trazabilidad</h2>
+          <p id="studySub">Genera un informe profesional, exporta el mapa IGAC y comparte la vista con QR.</p>
+        </div>
+        <div class="study-head-actions">
+          <span class="study-save" id="studySave"><span class="dot"></span> Guardado local</span>
+          <button type="button" class="modal-close" id="studyCloseX" aria-label="Cerrar centro de estudio">×</button>
+        </div>
+      </header>
+
+      <nav class="modal-tabs study-tabs" id="studyTabs" aria-label="Secciones del estudio">
+        <button type="button" class="active" data-stab="integral">Vista integral</button>
+        <button type="button" data-stab="informe">Informe</button>
+        <button type="button" data-stab="igac">Mapa IGAC</button>
+        <button type="button" data-stab="qr">Código QR</button>
+      </nav>
+
+      <div class="modal-body study-body" id="studyBody">
+        <!-- INTEGRAL -->
+        <section class="pane active study-pane" id="paneIntegral">
+          <div class="integral">
+            <div class="integral-head">
+              <div>
+                <span class="eyebrow">Vista integral en vivo</span>
+                <h3>Estudio nacional de incendios forestales</h3>
+                <p id="integralLead">Todos los módulos combinados: cartografía, informe, QR y sincronización.</p>
+              </div>
+              <div class="integral-kpis" id="integralKpis">
+                <div><b id="intFocos">—</b><small>Focos</small></div>
+                <div><b id="intQuemadas">—</b><small>Quemadas</small></div>
+                <div><b id="intDeptos">—</b><small>Deptos.</small></div>
+                <div><b id="intAreas">—</b><small>Áreas</small></div>
+              </div>
+            </div>
+            <div class="integral-grid">
+              <div class="integral-card integral-map">
+                <div class="integral-card-head"><strong>Plano cartográfico IGAC</strong><span>Marco · rosa · leyenda · escala</span></div>
+                <div class="integral-canvas-wrap"><canvas id="integralIgac"></canvas></div>
+              </div>
+              <div class="integral-card integral-report">
+                <div class="integral-card-head"><strong>Informe técnico</strong><span id="integralReportMeta">—</span></div>
+                <div class="integral-paper" id="integralReport"></div>
+              </div>
+              <div class="integral-side">
+                <div class="integral-card integral-qr">
+                  <div class="integral-card-head"><strong>Acceso móvil</strong><span>QR dinámico</span></div>
+                  <canvas id="integralQr"></canvas>
+                  <small id="integralQrUrl">—</small>
+                </div>
+                <div class="integral-card integral-sync">
+                  <div class="integral-card-head"><strong>Offline y sincronización</strong><span id="integralNet">En línea</span></div>
+                  <div class="integral-sync-row"><span id="integralSyncText">Todo guardado</span><button type="button" class="mini-sync" id="integralSyncNow">Sincronizar</button></div>
+                  <div class="integral-checklist" id="integralChecklist"></div>
+                </div>
+              </div>
+            </div>
+            <div class="integral-foot">
+              <button type="button" class="btn primary" id="integralPdf">Exportar informe PDF</button>
+              <button type="button" class="btn ghost" id="integralMapPdf">Exportar mapa PDF</button>
+              <button type="button" class="btn ghost" id="integralPng">Descargar mapa PNG</button>
+              <button type="button" class="btn ghost" id="integralGoReport">Editar informe</button>
+              <button type="button" class="btn ghost" id="integralGoQr">Ver QR</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- INFORME -->
+        <section class="pane study-pane" id="paneInforme">
+          <div class="report-layout">
+            <div class="report-form">
+              <div class="form-section">
+                <span class="eyebrow">Identificación</span>
+                <label>Título del informe<input id="repTitle" type="text" maxlength="120" placeholder="Informe técnico de incendios forestales"></label>
+                <div class="form-grid">
+                  <label>Autor / entidad<input id="repAuthor" type="text" maxlength="80" placeholder="Equipo técnico"></label>
+                  <label>Cargo<input id="repRole" type="text" maxlength="80" placeholder="Analista SIG"></label>
+                </div>
+              </div>
+              <div class="form-section">
+                <span class="eyebrow">Análisis editable</span>
+                <label>Observaciones<textarea id="repObs" rows="3" placeholder="Observaciones del periodo analizado…"></textarea></label>
+                <label>Conclusiones<textarea id="repConclusions" rows="3" placeholder="Conclusiones principales…"></textarea></label>
+                <label>Recomendaciones<textarea id="repRecommendations" rows="3" placeholder="Recomendaciones de gestión del riesgo…"></textarea></label>
+              </div>
+              <div class="form-section">
+                <span class="eyebrow">Exportación independiente</span>
+                <p class="hint">El informe se descarga como PDF independiente del mapa e incluye solo las capas activas. El mapa se exporta por separado en PNG o PDF desde las pestañas Integral e IGAC.</p>
+              </div>
+            </div>
+            <article class="report-paper" id="reportPreview" aria-live="polite"></article>
+          </div>
+        </section>
+
+        <!-- IGAC -->
+        <section class="pane study-pane" id="paneIgac">
+          <div class="igac-toolbar">
+            <div>
+              <span class="eyebrow">Salida cartográfica</span>
+              <strong>Plano con estándares visuales IGAC</strong>
+            </div>
+            <div class="igac-controls">
+              <label class="select-wrap">Formato
+                <select id="igacFormat">
+                  <option value="a4l">A4 horizontal</option>
+                  <option value="a4p">A4 vertical</option>
+                  <option value="carta">Carta horizontal</option>
+                </select>
+              </label>
+              <label class="check-row compact"><input type="checkbox" id="igacLegend" checked> Leyenda</label>
+              <label class="check-row compact"><input type="checkbox" id="igacGrid" checked> Retícula</label>
+            </div>
+          </div>
+          <div class="igac-stage">
+            <canvas id="igacCanvas" aria-label="Plano cartográfico IGAC"></canvas>
+          </div>
+          <p class="hint igac-note">Marco perimetral doble, rosa de los vientos, retícula de coordenadas, leyenda temática, escala gráfica y bloque de título. Documento de referencia; no sustituye la cartografía oficial del IGAC.</p>
+        </section>
+
+        <!-- QR -->
+        <section class="pane study-pane" id="paneQr">
+          <div class="qr-stage">
+            <div class="qr-card">
+              <span class="eyebrow">Acceso inmediato</span>
+              <h3>Escanea y abre esta vista</h3>
+              <div class="qr-canvas-wrap"><canvas id="qrCanvas" aria-label="Código QR de la vista actual"></canvas></div>
+              <p class="qr-caption" id="qrCaption">Año 2026 · focos y quemadas</p>
+              <div class="qr-link">
+                <input id="qrLink" type="text" readonly aria-label="Enlace de la vista">
+                <button type="button" class="btn small primary" id="qrCopy">Copiar</button>
+              </div>
+              <div class="qr-actions">
+                <button type="button" class="btn ghost small" id="qrDownload">Descargar PNG</button>
+                <button type="button" class="btn ghost small" id="qrOpen">Abrir enlace</button>
+              </div>
+              <p class="hint">El QR se regenera con el año, la categoría y la búsqueda activos. Para compartirlo en celulares, publica el HTML en una URL accesible o usa un servidor local.</p>
+            </div>
+            <div class="qr-side">
+              <div class="qr-side-card">
+                <span class="eyebrow">Vista actual</span>
+                <strong id="qrYear">2026</strong>
+                <p id="qrSummary">—</p>
+              </div>
+              <div class="qr-side-card">
+                <span class="eyebrow">Sincronización</span>
+                <strong id="qrSyncState">En línea</strong>
+                <p id="qrSyncText">Todo guardado en este dispositivo.</p>
+                <button type="button" class="btn ghost small" id="qrSyncNow">Sincronizar ahora</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer class="modal-foot study-foot">
+        <span class="study-foot-hint" id="studyHint">Mapa e informe son documentos independientes y solo incluyen las capas activas.</span>
+        <div class="study-foot-actions">
+          <button type="button" class="btn primary" id="btnExportPdf">Exportar informe PDF</button>
+          <button type="button" class="btn ghost" id="btnDownloadMapPdf">Exportar mapa PDF</button>
+          <button type="button" class="btn ghost" id="btnDownloadPng">Descargar mapa PNG</button>
+          <button type="button" class="btn ghost" id="btnDownloadQr">Descargar QR</button>
+          <button type="button" class="btn ghost" id="btnCopyLink">Copiar enlace</button>
+          <button type="button" class="btn ghost" id="studyClose">Cerrar</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <script src="vendor/leaflet.js"></script>
+  <script src="vendor/qrcode.js"></script>
+  <script src="vendor/jspdf.umd.min.js"></script>
+  <script src="data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

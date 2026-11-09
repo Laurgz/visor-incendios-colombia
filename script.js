@@ -4866,8 +4866,24 @@
   }
 
   /* -------------------------- Pantalla de carga -------------------------- */
+  // Duración mínima de la pantalla de carga: permanece visible al menos
+  // 15 segundos aunque el mapa termine de cargar antes.
+  const LOADER_MIN_MS = 15000;
+  const LOADER_START = Date.now();
   let loaderHidden = false;
+  let loaderMinTimer = null;
+
   function hideLoader() {
+    if (loaderHidden) return;
+    const restante = Math.max(0, LOADER_MIN_MS - (Date.now() - LOADER_START));
+    if (restante > 0) {
+      if (!loaderMinTimer) loaderMinTimer = setTimeout(ocultarLoader, restante);
+      return;
+    }
+    ocultarLoader();
+  }
+
+  function ocultarLoader() {
     if (loaderHidden) return;
     loaderHidden = true;
     const loader = document.getElementById("loader");

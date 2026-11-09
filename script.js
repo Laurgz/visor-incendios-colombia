@@ -594,7 +594,6 @@
     groups.areas = L.layerGroup();
     groups.focos = L.layerGroup();
     groups.quemadas = L.layerGroup();
-    groups.ausencias = L.layerGroup();
     groups.bosques = makeRaster(RASTER.bosque, 0.62);
     groups.agua = makeRaster(RASTER.agua, 0.78);
     groups.susceptibilidad = L.layerGroup();
@@ -941,23 +940,6 @@
         },
       }).addTo(group);
     }
-  }
-
-  function renderAusencias() {
-    const group = groups.ausencias;
-    if (!group) return;
-    group.clearLayers();
-    (D.ausencias || []).forEach((a) => {
-      const marker = L.circleMarker([a.lat, a.lon], {
-        radius: 2.4,
-        color: "#67e8f9",
-        weight: 0.4,
-        fillColor: "#22d3ee",
-        fillOpacity: 0.72,
-      });
-      bindClickPopup(marker, [a.lat, a.lon], popupAusencia(a));
-      marker.addTo(group);
-    });
   }
 
   /* --------------------- Intensidad relativa de focos ------------------- */
@@ -1764,7 +1746,7 @@
     if (!els.layerList) return;
     els.layerList.innerHTML = LAYERS.map((layer) => {
       const checked = !!state.layers[layer.id] && layer.available;
-      const isPoint = ["focos", "quemadas", "ausencias"].indexOf(layer.kind) >= 0;
+      const isPoint = ["focos", "quemadas"].indexOf(layer.kind) >= 0;
       return (
         '<label class="layer-row' + (layer.available ? "" : " disabled") + '"' +
           (layer.available ? "" : ' title="La capa se habilitará cuando el modelo termine de procesarse."') + ">" +
@@ -1861,7 +1843,7 @@
           '<div class="legend-row"><span class="legend-swatch" style="--c:#f97316;box-shadow:0 0 0 1.5px #fb923c inset"></span>' +
           "<span>Áreas quemadas <small>(polígonos)</small></span></div>";
       } else {
-        const ring = ["focos", "ausencias"].indexOf(layer.kind) >= 0;
+        const ring = ["focos"].indexOf(layer.kind) >= 0;
         html += fila(layer.name, layer.color, ring);
       }
     });
@@ -3692,7 +3674,7 @@
     ctx.fillText("LEYENDA", x + 12, y + 20);
     let cursor = y + 38;
     filas.forEach(function (layer) {
-      const punto = ["focos", "ausencias"].indexOf(layer.kind) >= 0;
+      const punto = ["focos"].indexOf(layer.kind) >= 0;
       if (punto) {
         ctx.beginPath();
         ctx.arc(x + 18, cursor - 4, 5, 0, Math.PI * 2);

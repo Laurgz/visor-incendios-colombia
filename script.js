@@ -4987,10 +4987,26 @@
     } catch (e) { /* geometría inválida */ }
   }
 
+  function renderEmergencias() {
+    const list = document.getElementById("emergencyList");
+    const pill = document.getElementById("emergencyDepto");
+    const contexto = deptoSeleccionado ? prettyDepto(deptoSeleccionado) : "Colombia";
+    if (pill) pill.textContent = contexto;
+    if (!list) return;
+    const sufijo = deptoSeleccionado ? " · " + prettyDepto(deptoSeleccionado) : "";
+    list.innerHTML = EMERGENCIAS.map(function (e) {
+      return '<li><span class="em-ico ' + e.icono + '" aria-hidden="true"></span>' +
+        '<div><strong>' + esc(e.nombre) + esc(sufijo) + "</strong>" +
+        '<small>' + esc(e.numero) + "</small></div></li>";
+    }).join("");
+  }
+
   function actualizarInfoDepto() {
     const info = document.getElementById("deptoInfo");
     const pill = document.getElementById("deptoPill");
     if (pill) pill.textContent = deptoSeleccionado ? prettyDepto(deptoSeleccionado) : "Nacional";
+    // Los números de emergencia se actualizan en cada cambio de selección.
+    renderEmergencias();
     if (!info) return;
     if (!deptoSeleccionado) {
       info.innerHTML = '<p class="hint">Selecciona un departamento para enfocar el mapa y ver capital, municipios y riesgo.</p>';
@@ -5010,8 +5026,6 @@
         '<div class="depto-meta">' + r.focos + " focos · " + r.quemadas + " quemadas (año " +
           (state.year == null ? "todos" : state.year) + ")</div>" +
       "</div>";
-    const pillEmerg = document.getElementById("emergencyDepto");
-    if (pillEmerg) pillEmerg.textContent = prettyDepto(deptoSeleccionado);
   }
 
   function initDepartamentos() {

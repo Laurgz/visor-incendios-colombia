@@ -1953,6 +1953,8 @@ input[type="range"]::-moz-range-thumb {
     top: 10px;
     right: 10px;
     left: 10px;
+    flex-wrap: wrap;
+    row-gap: 8px;
   }
 
   .modal {
@@ -1971,8 +1973,10 @@ input[type="range"]::-moz-range-thumb {
     width: calc(100vw - 20px);
   }
 
-  .map-actions .icon-btn:not(.menu-btn) {
-    display: none;
+  .map-actions {
+    flex: 0 0 100%;
+    order: 3;
+    justify-content: flex-start;
   }
 }
 
@@ -3172,10 +3176,6 @@ input[type="range"]::-moz-range-thumb {
 @media (max-width: 620px) {
   .map-actions .icon-btn.cmd {
     display: inline-flex;
-  }
-
-  .map-actions .icon-btn:not(.cmd) {
-    display: none;
   }
 
   .map-kpis {
@@ -4553,7 +4553,7 @@ input[type="range"]::-moz-range-thumb {
 /* Botones flotantes dinámicos (overlays): Detener Búsqueda / Detener Ruta */
 .overlay-actions {
   position: absolute;
-  bottom: 28px;
+  bottom: 72px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 680;
@@ -4844,4 +4844,62 @@ input[type="range"]::-moz-range-thumb {
     max-width: 260px;
   }
   .flami-avatar { width: 68px; height: 68px; }
+}
+
+/* ==========================================================================
+   Responsivo total: visibilidad completa en móvil (vertical y horizontal)
+   ========================================================================== */
+@media (max-width: 620px) {
+  /* Paneles superiores: por debajo de la barra (2 filas) y del botón Flami. */
+  .route-panel,
+  .measure-panel,
+  .qr-access-panel,
+  .geo-panel {
+    top: 116px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-height: calc(100vh - 130px);
+    overflow-y: auto;
+  }
+
+  .flami-btn {
+    right: 10px;
+    width: 42px;
+    height: 42px;
+  }
+
+  /* Botones flotantes (Detener Búsqueda / Ruta): compactos y centrados. */
+  .overlay-actions {
+    bottom: 58px;
+    gap: 6px;
+    max-width: calc(100% - 20px);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .overlay-btn {
+    padding: 7px 12px;
+    font-size: 10px;
+  }
+}
+
+/* Pantallas bajas (móvil en horizontal): los paneles no se recortan. */
+@media (max-height: 520px) {
+  .route-panel,
+  .measure-panel,
+  .qr-access-panel,
+  .geo-panel {
+    max-height: calc(100vh - 66px);
+    overflow-y: auto;
+  }
+
+  .overlay-actions {
+    bottom: 50px;
+  }
+
+  .flami {
+    max-height: calc(100vh - 20px);
+    overflow-y: auto;
+  }
 }

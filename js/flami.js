@@ -135,6 +135,14 @@
       }
       finalText = (finalText || "").toLowerCase().trim();
       if (!finalText) return;
+      // Despertar inmediato con la frase clave, sin esperar el debouncer.
+      if (!activo && finalText.indexOf(WAKE_WORD) >= 0) {
+        bufferTexto = "";
+        if (silencioTimer) clearTimeout(silencioTimer);
+        guardarHistorial("voz", finalText);
+        activar();
+        return;
+      }
       bufferTexto += (bufferTexto ? " " : "") + finalText;
       // Debouncer de silencio: esperar 7 s sin hablar para procesar.
       if (silencioTimer) clearTimeout(silencioTimer);
@@ -492,8 +500,14 @@
 
   function iniciarPasivo() {
     if (pasivoIniciado || !recognition || activo || escuchando) return;
-    pasivoIniciado = true;
-    try { recognition.start(); escuchando = true; } catch (e) { escuchando = false; }
+    try {
+      recognition.start();
+      escuchando = true;
+      pasivoIniciado = true;
+    } catch (e) {
+      escuchando = false;
+      // No marcar pasivoIniciado: se reintentará con el primer gesto del usuario.
+    }
   }
 
   function init() {
@@ -525,9 +539,11 @@
       window.speechSynthesis.getVoices();
     }
     initRecognition();
-    // Escucha pasiva: tras el primer clic del usuario se activa el micrófono
-    // para detectar "Hola Flami" en segundo plano.
+    // Always-On Listener: intentar iniciar la escucha pasiva desde el arranque
+    // (si el navegador lo permite) y, si no, con el primer gesto del usuario.
+    iniciarPasivo();
     document.addEventListener("click", iniciarPasivo, { passive: true });
+    document.addEventListener("keydown", iniciarPasivo, { passive: true });
   }
 
   if (document.readyState === "loading") {

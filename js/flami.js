@@ -418,7 +418,7 @@
     // GPS
     if (/mi ubicacion|mi ubicación|donde estoy|dónde estoy|gps|mi posicion|mi posición|ubicame|ubícame/.test(t)) {
       if (API) API.startGeo();
-      return { texto: "Activando tu ubicación en tiempo real." };
+      return { texto: "Activando la ubicación de tu dispositivo dentro del visor, en tiempo real." };
     }
     if (!/ruta|trayecto|llego|llegar|llevame|llévame|calcular/.test(t) && /foco mas cercano|foco más cercano|incendio mas cercano|incendio más cercano|mas cercano|más cercano/.test(t)) {
       var nf = API ? API.irAlFocoCercano() : null;

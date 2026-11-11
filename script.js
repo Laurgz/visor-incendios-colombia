@@ -1409,8 +1409,17 @@
   function initGeo() {
     if (!els.btnGeo) return;
     els.btnGeo.addEventListener("click", () => {
-      if (state.geoActive) stopGeo(false);
-      else startGeo();
+      const abierto = !els.geoPanel.classList.contains("hidden");
+      if (abierto) {
+        // Cerrar la pestaña sin detener el GPS (sigue activo en segundo plano).
+        els.geoPanel.classList.add("hidden");
+      } else if (state.geoActive) {
+        // Reabrir la pestaña mostrando la ubicación que ya se sigue.
+        els.geoPanel.classList.remove("hidden", "error");
+        centrarEnGeo();
+      } else {
+        startGeo();
+      }
     });
     els.geoClose.addEventListener("click", () => {
       els.geoPanel.classList.add("hidden");

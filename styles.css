@@ -4077,6 +4077,71 @@ input[type="range"]::-moz-range-thumb {
   font-size: 10px;
 }
 
+/* Guía de comandos de Flami */
+.flami-guide {
+  display: grid;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.flami-guide-cat {
+  margin-top: 8px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.flami-guide-cat:first-child {
+  margin-top: 0;
+}
+
+.flami-guide-item {
+  display: flex;
+  gap: 5px;
+}
+
+.flami-guide-cmd {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(8, 13, 23, 0.4);
+  color: var(--muted);
+  font-size: 10px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: border-color 0.18s var(--ease), background 0.18s var(--ease), color 0.18s var(--ease);
+}
+
+.flami-guide-cmd:hover {
+  border-color: rgba(255, 138, 60, 0.5);
+  background: rgba(255, 90, 60, 0.12);
+  color: var(--text);
+}
+
+.flami-guide-copy {
+  flex: 0 0 auto;
+  width: 28px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(8, 13, 23, 0.5);
+  color: var(--muted-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.flami-guide-copy:hover {
+  border-color: rgba(34, 211, 238, 0.5);
+  color: #a5f3fc;
+}
+
 .depto-select:focus {
   border-color: rgba(255, 90, 60, 0.5);
 }

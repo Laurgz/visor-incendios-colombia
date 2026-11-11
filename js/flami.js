@@ -37,6 +37,11 @@
     return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   }
 
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
   // ------------------------------------------------------------------- DOM
   var FLAMI_SVG =
     '<svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
@@ -535,8 +540,60 @@
     }
   }
 
+  // ------------------------------------------------------------------ guía
+  var COMANDOS_GUIA = [
+    { categoria: "Saludos", comandos: ["Hola Flami", "¿Cómo estás?", "¿Quién eres?", "Gracias"] },
+    { categoria: "Despedida", comandos: ["Adiós Flami", "Chao Flami"] },
+    { categoria: "Reporte", comandos: ["Dame el reporte de hoy", "Haz un resumen de incendios"] },
+    { categoria: "El Niño y clima", comandos: ["Activa El Niño severo", "Desactiva El Niño", "Enciende temperatura"] },
+    { categoria: "Capas", comandos: ["Activa focos 2020", "Apaga bosques", "Activa susceptibilidad", "Activa agua", "Todas las capas", "Ninguna capa"] },
+    { categoria: "Tiempo", comandos: ["Pon el año 2020", "Reproduce la animación"] },
+    { categoria: "GPS y foco", comandos: ["Mi ubicación", "Foco más cercano"] },
+    { categoria: "Ruteo", comandos: ["Traza ruta a Yopal", "Ruta a pie al foco más cercano", "Ruta en bicicleta hasta Boyacá"] },
+    { categoria: "Mapa base", comandos: ["Vista satelital", "Mapa de calles"] },
+    { categoria: "Centro de estudio", comandos: ["Abre el centro de estudio", "Cierra el centro de estudio"] },
+    { categoria: "Exportar", comandos: ["Realiza informe", "Exporta mapa JPG"] },
+    { categoria: "Búsqueda", comandos: ["Busca Yopal", "Busca el departamento de Boyacá"] },
+    { categoria: "Ayuda", comandos: ["Historial", "Ayuda"] },
+  ];
+
+  function copiarTexto(texto) {
+    function ok() { mostrarBurbuja("Comando copiado: " + texto); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(ok).catch(function () {});
+    } else {
+      ok();
+    }
+  }
+
+  function renderGuia() {
+    var cont = document.getElementById("flamiGuide");
+    if (!cont) return;
+    var total = 0;
+    var html = COMANDOS_GUIA.map(function (g) {
+      var items = g.comandos.map(function (c) {
+        total += 1;
+        return '<div class="flami-guide-item">' +
+          '<button type="button" class="flami-guide-cmd" data-cmd="' + esc(c) + '">' + esc(c) + '</button>' +
+          '<button type="button" class="flami-guide-copy" data-copy="' + esc(c) + '" title="Copiar">⧉</button>' +
+        "</div>";
+      }).join("");
+      return '<div class="flami-guide-cat">' + esc(g.categoria) + "</div>" + items;
+    }).join("");
+    cont.innerHTML = html;
+    var count = document.getElementById("flamiGuideCount");
+    if (count) count.textContent = total + " comandos";
+    cont.addEventListener("click", function (e) {
+      var cmd = e.target.closest("[data-cmd]");
+      if (cmd) { procesar(cmd.getAttribute("data-cmd")); return; }
+      var copy = e.target.closest("[data-copy]");
+      if (copy) copiarTexto(copy.getAttribute("data-copy"));
+    });
+  }
+
   function init() {
     el = crearDOM();
+    renderGuia();
     el.btn.addEventListener("click", function () {
       if (activo) desactivar();
       else activar();

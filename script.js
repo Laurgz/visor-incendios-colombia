@@ -5441,9 +5441,9 @@
       });
   }
 
-  function rutaDesdeGps(destino) {
+  function rutaDesdeGps(destino, perfil) {
     if (!state.geo || state.geo.lat == null) return null;
-    calcularRuta({ lat: state.geo.lat, lon: state.geo.lon }, destino);
+    calcularRuta({ lat: state.geo.lat, lon: state.geo.lon }, destino, perfil);
     return true;
   }
 
@@ -5748,6 +5748,22 @@
     return nf;
   }
 
+  // Devuelve {lat, lon, nombre} de un lugar (departamento o coordenadas).
+  function apiObtenerCoordenadas(texto) {
+    var m = String(texto).match(/(-?\d+(?:\.\d+)?)\s*[,;]\s*(-?\d+(?:\.\d+)?)/);
+    if (m) {
+      var lat = parseFloat(m[1]);
+      var lon = parseFloat(m[2]);
+      if (isFinite(lat) && isFinite(lon)) return { lat: lat, lon: lon, nombre: lat.toFixed(3) + ", " + lon.toFixed(3) };
+    }
+    var t = normalizarTexto(texto);
+    var depto = (D.departamentos_puntos || []).find(function (d) {
+      return t.indexOf(normalizarTexto(d.nombre)) >= 0;
+    });
+    if (depto) return { lat: depto.lat, lon: depto.lon, nombre: prettyDepto(depto.nombre) };
+    return null;
+  }
+
   window.VisorAPI = {
     setYear: function (y) { setYear(Number(y), { silent: false, toastIt: true, mark: true }); },
     setLayer: function (id, on) {
@@ -5769,8 +5785,10 @@
     startGeo: function () { startGeo(); },
     stopGeo: function () { stopGeo(false); },
     irAlFocoCercano: apiIrAlFocoCercano,
-    calcularRuta: function (origen, destino) { calcularRuta(origen, destino); },
-    rutaDesdeGps: function (destino) { return rutaDesdeGps(destino); },
+    calcularRuta: function (origen, destino, perfil) { calcularRuta(origen, destino, perfil); },
+    rutaDesdeGps: function (destino, perfil) { return rutaDesdeGps(destino, perfil); },
+    obtenerCoordenadas: apiObtenerCoordenadas,
+    setRouteProfile: function (p) { if (els.routeProfile) els.routeProfile.value = p; },
     rutaAlFocoCercano: function () {
       var nf = nearestFoco();
       if (!nf) return false;

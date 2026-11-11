@@ -404,16 +404,34 @@
       if (API) API.startGeo();
       return { texto: "Activando tu ubicación en tiempo real." };
     }
-    if (/foco mas cercano|foco más cercano|incendio mas cercano|incendio más cercano|mas cercano|más cercano/.test(t)) {
+    if (!/ruta|trayecto|llego|llegar|llevame|llévame|calcular/.test(t) && /foco mas cercano|foco más cercano|incendio mas cercano|incendio más cercano|mas cercano|más cercano/.test(t)) {
       var nf = API ? API.irAlFocoCercano() : null;
       return { texto: nf ? "Te llevo al foco más cercano." : "No encontré focos para el año actual." };
     }
-    // Ruteo interactivo: trazar ruta (desde el GPS) hasta el foco más cercano.
-    if (/ruta|trayecto|como llego|cómo llego|como llegar|cómo llegar|calcular ruta/.test(t)) {
-      if (API && API.rutaAlFocoCercano) {
+    // Ruteo interactivo por voz.
+    if (/ruta|trayecto|como llego|cómo llego|como llegar|cómo llegar|calcular ruta|llevame|llévame|llevala|llévala/.test(t)) {
+      if (!API) return { texto: "No puedo calcular rutas ahora." };
+      // Perfil de ruta por voz.
+      if (/a pie|caminando|andando/.test(t)) API.setRouteProfile("foot");
+      else if (/bicicleta|bici|en bici|cicla/.test(t)) API.setRouteProfile("bike");
+      else if (/carro|coche|conduciendo|manejando|en auto|en carro/.test(t)) API.setRouteProfile("driving");
+
+      // Foco más cercano.
+      if (/foco mas cercano|foco más cercano|incendio mas cercano|incendio más cercano/.test(t)) {
         var ok = API.rutaAlFocoCercano();
-        return { texto: ok ? "Calculando la ruta al foco más cercano." : "No pude calcular la ruta. Activa tu ubicación o elige los puntos en el mapa." };
+        return { texto: ok ? "Calculando la ruta al foco más cercano." : "No pude calcular la ruta. Activa tu ubicación." };
       }
+
+      // Destino específico (departamento/municipio/coordenadas).
+      var objetivo = t.replace(/ruta|trayecto|como llego|cómo llego|como llegar|cómo llegar|calcular ruta|llevame|llévame|llevala|llévala|hasta|a la|al |hacia/g, " ").replace(/\s+/g, " ").trim();
+      if (objetivo && API.obtenerCoordenadas) {
+        var dest = API.obtenerCoordenadas(objetivo);
+        if (dest && API.rutaDesdeGps) {
+          var r = API.rutaDesdeGps({ lat: dest.lat, lon: dest.lon });
+          return { texto: r ? "Calculando la ruta hasta " + dest.nombre + "." : "Activa tu ubicación GPS para calcular la ruta desde donde estás." };
+        }
+      }
+      return { texto: "Abre el panel de ruta y elige origen y destino, o dime 'ruta al foco más cercano'." };
     }
 
     // mapa base

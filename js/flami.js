@@ -354,8 +354,8 @@
       return { texto: "Abriendo el centro de estudio." };
     }
 
-    // El Niño — apagar/desactivar primero, para que "apaga el niño" no active.
-    if (/desactiva el niño|apaga el niño|apaga el nino|desactiva el nino|sin niño|sin el niño|sin el nino|quita el niño|quita el nino|apaga enso|desactiva enso/.test(t)) {
+    // El Niño — apagar/desactivar primero, para que "apaga fenómeno niño" no active.
+    if (/(desactiva|desactivar|apaga|apagar|quita|quitar|sin|apago|desactivo)\b/.test(t) && /nino|niño|enso|fenomeno|fenómeno/.test(t)) {
       if (API) API.setEnso(false, "neutro");
       return { texto: "Contexto de El Niño desactivado." };
     }
@@ -569,7 +569,7 @@
     { categoria: "Saludos", comandos: ["Hola Flami", "¿Cómo estás?", "¿Quién eres?", "Gracias"] },
     { categoria: "Despedida", comandos: ["Adiós Flami", "Chao Flami"] },
     { categoria: "Reporte", comandos: ["Dame el reporte de hoy", "Haz un resumen de incendios"] },
-    { categoria: "El Niño y clima", comandos: ["Activa El Niño severo", "Apaga El Niño", "Desactiva El Niño", "Enciende temperatura"] },
+    { categoria: "El Niño y clima", comandos: ["Activa El Niño severo", "Apaga fenómeno Niño", "Enciende temperatura"] },
     { categoria: "Capas", comandos: ["Activa focos 2020", "Apaga bosques", "Activa susceptibilidad", "Activa agua", "Todas las capas", "Ninguna capa"] },
     { categoria: "Tiempo", comandos: ["Pon el año 2020", "Reproduce la animación"] },
     { categoria: "GPS y foco", comandos: ["Mi ubicación", "Foco más cercano"] },

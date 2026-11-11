@@ -4550,6 +4550,75 @@ input[type="range"]::-moz-range-thumb {
   color: #a5f3fc;
 }
 
+/* Botones flotantes dinámicos (overlays): Detener Búsqueda / Detener Ruta */
+.overlay-actions {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 680;
+  display: flex;
+  gap: 9px;
+  pointer-events: none;
+}
+
+.overlay-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: rgba(13, 21, 35, 0.92);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.overlay-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
+}
+
+.overlay-btn.hidden {
+  display: none;
+}
+
+.overlay-btn.stop-search {
+  border-color: rgba(255, 138, 60, 0.55);
+  color: #ffd6a8;
+}
+
+.overlay-btn.stop-search svg {
+  color: #ffb066;
+}
+
+.overlay-btn.stop-search:hover {
+  background: rgba(255, 90, 60, 0.16);
+  border-color: rgba(255, 138, 60, 0.8);
+}
+
+.overlay-btn.stop-route {
+  border-color: rgba(59, 130, 246, 0.55);
+  color: #bfdbfe;
+}
+
+.overlay-btn.stop-route svg {
+  color: #93c5fd;
+}
+
+.overlay-btn.stop-route:hover {
+  background: rgba(37, 99, 235, 0.18);
+  border-color: rgba(59, 130, 246, 0.85);
+}
+
 /* ==========================================================================
    Flami — agente virtual de voz
    ========================================================================== */

@@ -271,6 +271,8 @@
     routeSteps: $("#routeSteps"),
     routeClear: $("#routeClear"),
     routeProfile: $("#routeProfile"),
+    btnStopSearch: $("#btnStopSearch"),
+    btnStopRoute: $("#btnStopRoute"),
     btnReset: $("#btnReset"),
     btnFullscreen: $("#btnFullscreen"),
     btnGeo: $("#btnGeo"),
@@ -5509,6 +5511,51 @@
     });
   }
 
+  // ==========================================================================
+  // Botones flotantes dinámicos (UI overlays): Detener Búsqueda y Detener Ruta.
+  // ==========================================================================
+  function detenerBusqueda() {
+    highlightGroup.clearLayers();
+    if (map) map.fitBounds(BOUNDS, { padding: [26, 26], animate: true, duration: 0.9 });
+    Toast.info("Búsqueda detenida", "Resaltado eliminado y vista restablecida.", "stopSearch");
+  }
+
+  function detenerRutaCompleta() {
+    routeState.activo = false;
+    routeLimpiar();
+    if (els.routePanel) els.routePanel.classList.add("hidden");
+    if (els.btnRoute) els.btnRoute.classList.remove("active");
+    if (map) map.off("click", routeOnMapClick);
+    if (els.routeSetOrigin) els.routeSetOrigin.textContent = "📍 Origen: clic en el mapa";
+    if (els.routeSetDest) els.routeSetDest.textContent = "🏁 Destino: clic en el mapa";
+    Toast.info("Ruta detenida", "Trayecto y marcadores eliminados.", "stopRoute");
+  }
+
+  function actualizarOverlayBusqueda() {
+    if (!els.btnStopSearch) return;
+    const hay = highlightGroup && highlightGroup.getLayers().length > 0;
+    els.btnStopSearch.classList.toggle("hidden", !hay);
+  }
+
+  function actualizarOverlayRuta() {
+    if (!els.btnStopRoute) return;
+    const hay = routeGroup && routeGroup.getLayers().length > 0;
+    els.btnStopRoute.classList.toggle("hidden", !hay);
+  }
+
+  function initOverlays() {
+    if (els.btnStopSearch) els.btnStopSearch.addEventListener("click", detenerBusqueda);
+    if (els.btnStopRoute) els.btnStopRoute.addEventListener("click", detenerRutaCompleta);
+    if (highlightGroup) {
+      highlightGroup.on("layeradd", actualizarOverlayBusqueda);
+      highlightGroup.on("layerremove", actualizarOverlayBusqueda);
+    }
+    if (routeGroup) {
+      routeGroup.on("layeradd", actualizarOverlayRuta);
+      routeGroup.on("layerremove", actualizarOverlayRuta);
+    }
+  }
+
   // Descarga de datos filtrados en formatos GIS abiertos.
   function descargarArchivo(nombre, contenido, tipo) {
     const blob = new Blob([contenido], { type: tipo });
@@ -5585,6 +5632,7 @@
     initMeasure();
     initQrAcceso();
     initRouting();
+    initOverlays();
     setYear(state.year, { silent: true, toastIt: false });
     updateLegend();
     updateMapEmpty();

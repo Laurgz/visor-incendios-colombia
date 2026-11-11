@@ -449,6 +449,18 @@
         <div id="legendBody"></div>
       </div>
 
+      <!-- Botones flotantes dinámicos (overlays) -->
+      <div class="overlay-actions" id="overlayActions" role="group" aria-label="Acciones flotantes del visor">
+        <button type="button" class="overlay-btn stop-search hidden" id="btnStopSearch" aria-label="Detener búsqueda y limpiar resaltado">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <span>Detener Búsqueda</span>
+        </button>
+        <button type="button" class="overlay-btn stop-route hidden" id="btnStopRoute" aria-label="Detener ruta y limpiar trayecto">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h6"/></svg>
+          <span>Detener Ruta</span>
+        </button>
+      </div>
+
       <div class="map-empty" id="mapEmpty">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 18 9 5 9-5"/></svg>
         <strong>Activa una capa para empezar</strong>

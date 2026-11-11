@@ -5457,6 +5457,28 @@
   }
 
   // Buscador territorial universal: coordenadas, departamentos o texto libre.
+  // Resalta la geometría encontrada (stroke/fill temporal) y hace zoom suave.
+  function apiResaltarDepto(nombre) {
+    var feat = ((D.departamentos && D.departamentos.features) || []).find(function (f) {
+      return (f.properties || {}).nombre === nombre;
+    });
+    if (!feat) { enfocarDepto(nombre); return; }
+    try {
+      highlightGroup.clearLayers();
+      var capa = L.geoJSON(sinPuntos(feat), {
+        style: { color: "#ffd166", weight: 3, opacity: 0.95, fillColor: "#ff8a3c", fillOpacity: 0.35 },
+      });
+      capa.addTo(highlightGroup);
+      if (!map.hasLayer(highlightGroup)) highlightGroup.addTo(map);
+      var b = capa.getBounds();
+      if (b && b.isValid()) map.flyToBounds(b, { padding: [40, 40], duration: 1.4 });
+    } catch (e) { enfocarDepto(nombre); }
+  }
+
+  function normalizarTexto(s) {
+    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
   function apiBuscarTerritorio(texto) {
     if (!map) return { tipo: "error", nombre: texto };
     var m = texto.match(/(-?\d+(?:\.\d+)?)\s*[,;]\s*(-?\d+(?:\.\d+)?)/);
@@ -5464,15 +5486,15 @@
       var lat = parseFloat(m[1]);
       var lon = parseFloat(m[2]);
       if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-        map.setView([lat, lon], 12, { animate: true, duration: 0.8 });
+        map.flyTo([lat, lon], 12, { duration: 1.2 });
         return { tipo: "coordenadas", nombre: lat.toFixed(4) + ", " + lon.toFixed(4) };
       }
     }
-    var t = texto.toLowerCase();
+    var t = normalizarTexto(texto);
     var deptos = (D.departamentos_puntos || []).map(function (d) { return d.nombre; });
-    var depto = deptos.find(function (d) { return t.indexOf(d.toLowerCase()) >= 0; });
+    var depto = deptos.find(function (d) { return t.indexOf(normalizarTexto(d)) >= 0; });
     if (depto) {
-      enfocarDepto(depto);
+      apiResaltarDepto(depto);
       return { tipo: "departamento", nombre: prettyDepto(depto) };
     }
     apiBuscar(texto);
@@ -5503,6 +5525,7 @@
       $$("#layerList input[data-layer]").forEach(function (cb) { cb.checked = !!on; });
     },
     openStudy: function (t) { openStudy(t || "integral"); },
+    closeStudy: function () { closeStudy(); },
     startGeo: function () { startGeo(); },
     stopGeo: function () { stopGeo(false); },
     irAlFocoCercano: apiIrAlFocoCercano,
@@ -5512,6 +5535,7 @@
     searchTerritory: apiBuscarTerritorio,
     exportarInforme: function () { exportReportPdf(); },
     descargarMapa: function () { downloadIgacPng(); },
+    descargarMapaPdf: function () { exportMapPdf(); },
     enfocarDepto: function (nombre) { enfocarDepto(nombre); },
     toggleYearPlay: function () { toggleYearPlay(); },
     getEstado: function () {

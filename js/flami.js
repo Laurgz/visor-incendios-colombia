@@ -279,19 +279,27 @@
       return { texto: "Puedo activar o apagar capas, cambiar el año, ajustar El Niño, activar tu GPS, buscar municipios, cambiar el mapa base, abrir el centro de estudio y exportar informes. Prueba con 'activa focos' o 'pon el año 2020'." };
     }
 
-    // exportar mapa (JPG/PNG)
-    if (/exportar|exporta|descargar|descarga/.test(t) && /mapa|jpg|png|imagen/.test(t)) {
-      if (API) API.descargarMapa();
-      return { texto: "Exportando el mapa en imagen." };
-    }
-
-    // exportar informe (PDF)
-    if (/exportar|descargar|generar/.test(t) && /informe|reporte|pdf/.test(t)) {
-      if (API) API.exportarInforme();
-      return { texto: "Generando el informe en PDF." };
+    // Exportaciones automáticas por voz
+    if (/(realiza|realizar|haz|hacer|genera|generar|exporta|exportar|descarga|descargar|produce|producir)/.test(t)) {
+      if (/informe|reporte/.test(t)) {
+        if (API) API.exportarInforme();
+        return { texto: "Generando el informe en PDF." };
+      }
+      if (/mapa|plano|cartografia|cartografía/.test(t)) {
+        if (/jpg|png|imagen/.test(t)) {
+          if (API) API.descargarMapa();
+          return { texto: "Exportando el mapa en imagen." };
+        }
+        if (API) API.descargarMapaPdf();
+        return { texto: /pdf/.test(t) ? "Descargando el mapa en PDF." : "Realizando el mapa en PDF." };
+      }
     }
 
     // centro de estudio
+    if (/cierra|cerrar/.test(t) && /centro de estudio|estudio|modal|panel/.test(t)) {
+      if (API) API.closeStudy();
+      return { texto: "Cerrando el centro de estudio." };
+    }
     if (/centro de estudio|abre el estudio|abre el informe|ver reporte|ver informe/.test(t)) {
       if (API) API.openStudy("integral");
       return { texto: "Abriendo el centro de estudio." };

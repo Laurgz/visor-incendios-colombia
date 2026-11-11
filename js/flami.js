@@ -32,6 +32,11 @@
     try { localStorage.setItem("flami_historial", JSON.stringify(historial)); } catch (e) {}
   }
 
+  // Normaliza acentos y mayúsculas para que el NLU entienda "Boyacá" == "boyaca".
+  function normalizar(s) {
+    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
   // ------------------------------------------------------------------- DOM
   var FLAMI_SVG =
     '<svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
@@ -253,11 +258,14 @@
   }
 
   function nlu(texto) {
-    var t = texto.toLowerCase().trim();
+    var t = normalizar(texto).trim();
     var API = window.VisorAPI;
 
     if (/^(hola|buenos dias|buenas tardes|buenas noches|hey|que tal|hola flami)\b/.test(t)) {
       return { texto: "¡Hola! Soy Flami, tu asistente del visor de incendios de Colombia. ¿En qué te ayudo?" };
+    }
+    if (t === "flami" || t === "flami,") {
+      return { texto: "¡Aquí estoy! Dime qué necesitas." };
     }
     if (/como estas|que haces|como te sientes/.test(t)) {
       return { texto: "¡Estoy genial y llena de energía! Pídeme activar capas, cambiar de año o buscar un municipio." };
@@ -277,6 +285,23 @@
     // ayuda
     if (/ayuda|que puedes hacer|comandos|que sabes|ayudame/.test(t)) {
       return { texto: "Puedo activar o apagar capas, cambiar el año, ajustar El Niño, activar tu GPS, buscar municipios, cambiar el mapa base, abrir el centro de estudio y exportar informes. Prueba con 'activa focos' o 'pon el año 2020'." };
+    }
+
+    // resumen hablado de la situación actual del país
+    if (/reporte de hoy|resumen|resumir|situacion actual|que esta pasando|dame el reporte|reporte actual|resumen de incendios|como esta el pais|cómo está el país/.test(t)) {
+      var res = API ? API.getResumen() : null;
+      if (res) {
+        var resumen =
+          "Estamos analizando el año " + res.anio + ", con " + res.focos + " focos activos y " +
+          res.quemadas + " áreas quemadas. En total hay " + res.totalFocos + " focos históricos registrados. ";
+        if (res.ensoActivo) {
+          resumen += "Hay alerta de El Niño " + res.ensoIntensidad + ", así que la susceptibilidad a incendios está aumentada. ¡Mucho cuidado con las quemas!";
+        } else {
+          resumen += "No hay alerta de El Niño activa en este momento.";
+        }
+        return { texto: resumen };
+      }
+      return { texto: "No pude obtener el reporte en este momento." };
     }
 
     // Exportaciones automáticas por voz
@@ -427,12 +452,12 @@
   function encontrarCapa(texto) {
     var API = window.VisorAPI;
     if (!API || !API.listaCapas) return null;
-    var t = texto.toLowerCase();
+    var t = normalizar(texto);
     for (var i = 0; i < API.listaCapas.length; i++) {
       var capa = API.listaCapas[i];
       var aliases = CAPA_ALIASES[capa.id] || [capa.name.toLowerCase()];
       for (var j = 0; j < aliases.length; j++) {
-        if (t.indexOf(aliases[j]) >= 0) return capa;
+        if (t.indexOf(normalizar(aliases[j])) >= 0) return capa;
       }
     }
     return null;
@@ -441,8 +466,8 @@
   function encontrarDepto(texto) {
     var API = window.VisorAPI;
     if (!API || !API.listaDeptos) return null;
-    var t = texto.toLowerCase();
-    return API.listaDeptos.find(function (d) { return t.indexOf(d.toLowerCase()) >= 0; }) || null;
+    var t = normalizar(texto);
+    return API.listaDeptos.find(function (d) { return t.indexOf(normalizar(d)) >= 0; }) || null;
   }
 
   // ------------------------------------------------------------------ init

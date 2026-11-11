@@ -5545,6 +5545,19 @@
         enso: { activo: ensoActivo, intensidad: ensoIntensidad },
       };
     },
+    getResumen: function () {
+      var focos = focosDeAnio(state.year).length;
+      var quemadas = quemadasDeAnio(state.year).length;
+      return {
+        anio: state.year == null ? "todos los años" : state.year,
+        focos: focos,
+        quemadas: quemadas,
+        totalFocos: (D.focos || []).length,
+        totalQuemadas: (D.quemadas || []).length,
+        ensoActivo: ensoActivo,
+        ensoIntensidad: ensoIntensidad,
+      };
+    },
     listaCapas: LAYERS.map(function (l) { return { id: l.id, name: l.name }; }),
     listaDeptos: (D.departamentos_puntos || []).map(function (d) { return d.nombre; }),
   };

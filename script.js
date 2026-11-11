@@ -541,7 +541,7 @@
     { id: "quemadas", name: "Áreas quemadas", desc: "MCD64A1 · por año", color: "#f97316", kind: "quemadas", available: true },
     { id: "deptos", name: "Departamentos", desc: "FAO GAUL · " + fmt((D.departamentos_puntos || []).length), color: "#e2e8f0", kind: "deptos", available: true },
     { id: "enso", name: "El Niño (ENSO)", desc: "Re-ponderación climática · amenaza", color: "#f59e0b", kind: "enso", available: true },
-    { id: "lst", name: "Temperatura superficial (LST)", desc: "Gradiente térmico · GEE", color: "#ef4444", kind: "lst", available: false },
+    { id: "lst", name: "Temperatura superficial (LST)", desc: "Gradiente térmico · MODIS", color: "#ef4444", kind: "lst", available: !!RASTER.lst },
   ];
 
   let map = null;
@@ -610,6 +610,8 @@
     groups.bosques = makeRaster(RASTER.bosque, 0.62);
     groups.agua = makeRaster(RASTER.agua, 0.78);
     groups.susceptibilidad = L.layerGroup();
+    groups.lst = makeRaster(RASTER.lst, 0.7);
+    groups.sequia = makeRaster(RASTER.sequia, 0.6);
     groups.firms = L.layerGroup();
     groups.firmsWms = L.tileLayer.wms(GIBS_WMS_URL, {
       layers: GIBS_LAYER,
@@ -5493,6 +5495,15 @@
     if (selLayer) selLayer.value = ensoIntensidad;
     if (ensoCb) ensoCb.checked = ensoActivo;
     if (pill) pill.textContent = ensoActivo ? (ensoIntensidad.charAt(0).toUpperCase() + ensoIntensidad.slice(1)) : "Desactivado";
+    // Mostrar/ocultar el ráster de sequía (CHIRPS) según El Niño.
+    if (groups.sequia && map) {
+      if (ensoActivo) {
+        groups.sequia.setOpacity(ensoIntensidad === "severo" ? 0.75 : 0.55);
+        if (!map.hasLayer(groups.sequia)) groups.sequia.addTo(map);
+      } else if (map.hasLayer(groups.sequia)) {
+        map.removeLayer(groups.sequia);
+      }
+    }
     if (capaActiva("susceptibilidad")) renderCloropleta();
     if (deptoSeleccionado) actualizarInfoDepto();
     scheduleStudyRefresh();

@@ -4340,3 +4340,167 @@ input[type="range"]::-moz-range-thumb {
   background: rgba(8, 145, 178, 0.2);
   color: #a5f3fc;
 }
+
+/* ==========================================================================
+   Flami — agente virtual de voz
+   ========================================================================== */
+.flami-btn {
+  position: fixed;
+  top: 62px;
+  right: 14px;
+  z-index: 1050;
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  padding: 7px;
+  border: 1px solid rgba(255, 138, 60, 0.5);
+  border-radius: 50%;
+  background: rgba(13, 21, 35, 0.88);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+
+.flami-btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 176, 77, 0.8);
+  box-shadow: 0 12px 28px rgba(255, 90, 60, 0.25);
+}
+
+.flami-btn.active {
+  border-color: #ff8a3c;
+  box-shadow: 0 0 0 4px rgba(255, 138, 60, 0.25), 0 12px 28px rgba(255, 90, 60, 0.35);
+}
+
+.flami-btn svg {
+  width: 100%;
+  height: 100%;
+}
+
+.flami {
+  position: fixed;
+  bottom: 22px;
+  right: 18px;
+  z-index: 1060;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 320px;
+  transition: opacity 0.35s var(--ease), transform 0.35s var(--ease);
+}
+
+.flami.flami-hidden {
+  opacity: 0;
+  transform: translateY(16px);
+  pointer-events: none;
+}
+
+.flami-bubble {
+  position: relative;
+  padding: 10px 13px;
+  border-radius: 14px 14px 4px 14px;
+  background: rgba(13, 21, 35, 0.95);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.45;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+  max-width: 280px;
+}
+
+.flami-avatar {
+  width: 86px;
+  height: 86px;
+  filter: drop-shadow(0 8px 16px rgba(255, 90, 60, 0.35));
+}
+
+.flami-avatar svg {
+  width: 100%;
+  height: 100%;
+}
+
+.flami-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(13, 21, 35, 0.85);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.flami-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+
+.flami[data-estado="escuchando"] .flami-dot {
+  background: var(--cyan);
+  box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.5);
+  animation: flami-pulse 1.4s infinite;
+}
+.flami[data-estado="procesando"] .flami-dot {
+  background: var(--amber);
+  animation: flami-blink 0.6s infinite;
+}
+.flami[data-estado="hablando"] .flami-dot {
+  background: var(--green);
+  animation: flami-pulse 0.9s infinite;
+}
+.flami[data-estado="alerta"] .flami-dot {
+  background: var(--red);
+}
+
+.flami-flame {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: flami-flicker 1.6s ease-in-out infinite;
+}
+
+.flami-spark {
+  transform-box: fill-box;
+  animation: flami-float 2.4s ease-in-out infinite;
+}
+.flami-spark.s2 { animation-delay: 0.6s; }
+.flami-spark.s3 { animation-delay: 1.2s; }
+
+@keyframes flami-flicker {
+  0%, 100% { transform: scale(1, 1); }
+  30% { transform: scale(1.05, 0.97); }
+  55% { transform: scale(0.97, 1.04); }
+  75% { transform: scale(1.03, 0.99); }
+}
+
+@keyframes flami-float {
+  0%, 100% { transform: translateY(0); opacity: 0.7; }
+  50% { transform: translateY(-4px); opacity: 1; }
+}
+
+@keyframes flami-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.5); }
+  70% { box-shadow: 0 0 0 6px rgba(34, 211, 238, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); }
+}
+
+@keyframes flami-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (max-width: 620px) {
+  .flami {
+    right: 10px;
+    bottom: 12px;
+    max-width: 260px;
+  }
+  .flami-avatar { width: 68px; height: 68px; }
+}

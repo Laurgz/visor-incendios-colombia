@@ -5423,6 +5423,79 @@
   // Red de seguridad: nunca mostrar la pantalla de carga más de 10 s.
   setTimeout(ocultarLoader, LOADER_MAX_MS);
 
+  /* ------------------------- API pública para Flami ----------------------- */
+  function apiSetBasemap(which) {
+    if (which === "osm") {
+      if (map && sat && map.hasLayer(sat)) map.removeLayer(sat);
+      if (map && osm && !map.hasLayer(osm)) osm.addTo(map);
+      basemap = "osm";
+    } else {
+      if (map && osm && map.hasLayer(osm)) map.removeLayer(osm);
+      if (map && sat && !map.hasLayer(sat)) sat.addTo(map);
+      basemap = "sat";
+    }
+  }
+
+  function apiSetEnso(activo, intensidad) {
+    ensoActivo = !!activo;
+    if (intensidad) ensoIntensidad = intensidad;
+    const toggle = document.getElementById("ensoToggle");
+    const sel = document.getElementById("ensoIntensity");
+    const pill = document.getElementById("ensoPill");
+    if (toggle) toggle.checked = ensoActivo;
+    if (sel && intensidad) sel.value = intensidad;
+    if (pill) pill.textContent = ensoActivo ? (ensoIntensidad.charAt(0).toUpperCase() + ensoIntensidad.slice(1)) : "Desactivado";
+    if (capaActiva("susceptibilidad")) renderCloropleta();
+    if (deptoSeleccionado) actualizarInfoDepto();
+  }
+
+  function apiBuscar(texto) {
+    state.query = texto;
+    els.searchInput.value = texto;
+    els.searchClear.classList.add("visible");
+    runSearch({ silent: true });
+  }
+
+  function apiIrAlFocoCercano() {
+    const nf = nearestFoco();
+    if (!nf || !map) return null;
+    map.setView([nf.item.lat, nf.item.lon], Math.max(map.getZoom(), 11), { animate: true, duration: 0.8 });
+    return nf;
+  }
+
+  window.VisorAPI = {
+    setYear: function (y) { setYear(Number(y), { silent: false, toastIt: true, mark: true }); },
+    setLayer: function (id, on) {
+      setLayer(id, on);
+      var cb = document.querySelector('#layerList input[data-layer="' + id + '"]');
+      if (cb) cb.checked = !!on;
+    },
+    toggleLayer: function (id) {
+      setLayer(id, !state.layers[id]);
+      var cb = document.querySelector('#layerList input[data-layer="' + id + '"]');
+      if (cb) cb.checked = !!state.layers[id];
+    },
+    openStudy: function (t) { openStudy(t || "integral"); },
+    startGeo: function () { startGeo(); },
+    stopGeo: function () { stopGeo(false); },
+    irAlFocoCercano: apiIrAlFocoCercano,
+    setBasemap: apiSetBasemap,
+    setEnso: apiSetEnso,
+    buscar: apiBuscar,
+    exportarInforme: function () { exportReportPdf(); },
+    enfocarDepto: function (nombre) { enfocarDepto(nombre); },
+    toggleYearPlay: function () { toggleYearPlay(); },
+    getEstado: function () {
+      return {
+        year: state.year,
+        capas: LAYERS.filter(function (l) { return state.layers[l.id]; }).map(function (l) { return l.name; }),
+        enso: { activo: ensoActivo, intensidad: ensoIntensidad },
+      };
+    },
+    listaCapas: LAYERS.map(function (l) { return { id: l.id, name: l.name }; }),
+    listaDeptos: (D.departamentos_puntos || []).map(function (d) { return d.nombre; }),
+  };
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {

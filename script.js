@@ -5863,6 +5863,8 @@
     },
     listaCapas: LAYERS.map(function (l) { return { id: l.id, name: l.name }; }),
     listaDeptos: (D.departamentos_puntos || []).map(function (d) { return d.nombre; }),
+    listaMunicipios: (D.municipios || []).map(function (m) { return m.nombre; }),
+    anios: ANIOS,
   };
   window.searchTerritory = apiBuscarTerritorio;
 

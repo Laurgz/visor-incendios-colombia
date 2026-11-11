@@ -365,9 +365,14 @@
       return { texto: "Contexto de El Niño desactivado." };
     }
 
-    // Temperatura superficial (LST): capa pendiente de datos GEE.
+    // Temperatura superficial (LST): activar/desactivar la capa (ya tiene datos).
     if (/temperatura|lst|termica|térmica|termico|térmico/.test(t)) {
-      return { texto: "La capa de temperatura superficial (LST) requiere los datos de Google Earth Engine, que aún están pendientes de procesar." };
+      var apagarTemp = /apaga|desactiva|quita|oculta|esconde/.test(t);
+      if (API && API.setLayer) {
+        API.setLayer("lst", !apagarTemp);
+        return { texto: apagarTemp ? "Capa de temperatura desactivada." : "Mostrando la capa de temperatura superficial (LST)." };
+      }
+      return { texto: "No pude controlar la temperatura." };
     }
 
     // capas
@@ -375,7 +380,7 @@
       var capa = encontrarCapa(t);
       if (capa) {
         if (API) API.setLayer(capa.id, true);
-        var anioCapa = t.match(/en\s+(20\d\d|19\d\d)/);
+        var anioCapa = t.match(/(20\d\d|19\d\d)/);
         if (anioCapa && API) API.setYear(anioCapa[1]);
         return { texto: "Capa " + capa.name + " activada" + (anioCapa ? " para el año " + anioCapa[1] : "") + "." };
       }
@@ -396,8 +401,13 @@
     // año / time slider
     var anio = t.match(/(20\d\d|19\d\d)/);
     if (anio && /año|ano|anio|year|pon el año|ir al año|cambia al año|pon/.test(t)) {
-      if (API) API.setYear(anio[1]);
-      return { texto: "Mostrando el año " + anio[1] + "." };
+      var y = Number(anio[1]);
+      var aniosValidos = (API && API.anios) || [];
+      if (aniosValidos.indexOf(y) !== -1) {
+        if (API) API.setYear(y);
+        return { texto: "Mostrando el año " + y + "." };
+      }
+      return { texto: "El año " + anio[1] + " no está disponible. El visor cubre de 2012 a 2026." };
     }
     if (/reproduc|animacion|animación|play|time slider/.test(t)) {
       if (API) API.toggleYearPlay();

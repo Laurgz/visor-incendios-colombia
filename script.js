@@ -2736,10 +2736,11 @@
   }
 
   function capaActiva(id) {
-    return capaDisponible(id) && !!state.layers[id];
+    return capaDisponible(id) && (exportarTodo || !!state.layers[id]);
   }
 
   function capasActivas() {
+    if (exportarTodo) return LAYERS.filter(function (l) { return l.available; });
     return LAYERS.filter(function (l) { return l.available && state.layers[l.id]; });
   }
 
@@ -4925,6 +4926,8 @@
   // intensidad seleccionada. Se aplica como factor multiplicativo del riesgo.
   let ensoActivo = false;
   let ensoIntensidad = "neutro";
+  // Modo de exportación: "personalizado" (capas activas) o "general" (todas).
+  let exportarTodo = false;
 
   function factorEnso() {
     if (!ensoActivo) return 1;
@@ -5116,6 +5119,15 @@
 
   function initRiesgo() {
     renderCloropleta();
+    const exportMode = document.getElementById("exportMode");
+    if (exportMode) {
+      exportMode.addEventListener("change", function () {
+        exportarTodo = exportMode.value === "general";
+        Toast.info("Modo de exportación", exportarTodo
+          ? "Nacional consolidado: se incluirán todas las capas."
+          : "Personalizado: solo capas activas.", "exportMode");
+      });
+    }
   }
 
   function initEnso() {

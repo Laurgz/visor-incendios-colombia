@@ -1418,6 +1418,12 @@
     if (els.geoStop) els.geoStop.classList.toggle("hidden", !activo);
   }
 
+  // Abre/despliega el panel "Ubicación en vivo" SIN iniciar el rastreo GPS.
+  function abrirPanelGeo() {
+    if (els.geoPanel) els.geoPanel.classList.remove("hidden", "error");
+    actualizarBotonesGeo();
+  }
+
   function initGeo() {
     if (!els.btnGeo) return;
     els.btnGeo.addEventListener("click", () => {
@@ -1426,14 +1432,14 @@
         // Cerrar la pestaña sin detener el GPS (sigue activo en segundo plano).
         els.geoPanel.classList.add("hidden");
       } else {
-        // Solo abrir la pestaña: el GPS NO se activa automáticamente.
-        els.geoPanel.classList.remove("hidden", "error");
-        actualizarBotonesGeo();
+        // ÚNICA función del botón superior: alternar/abrir el panel.
+        abrirPanelGeo();
       }
     });
     els.geoClose.addEventListener("click", () => {
       els.geoPanel.classList.add("hidden");
     });
+    // El rastreo GPS SOLO se inicia con el botón explícito "Activar ubicación".
     if (els.geoActivate) els.geoActivate.addEventListener("click", () => startGeo());
     els.geoCenter.addEventListener("click", centrarEnGeo);
     els.geoStop.addEventListener("click", () => stopGeo(false));
@@ -5525,9 +5531,9 @@
         routeState.origen = { lat: state.geo.lat, lon: state.geo.lon };
         routeDibujarPunto([state.geo.lat, state.geo.lon], "#22c55e");
         if (els.routeSetOrigin) els.routeSetOrigin.textContent = "📍 Origen: tu ubicación";
-      } else if (window.VisorAPI && window.VisorAPI.startGeo) {
-        window.VisorAPI.startGeo();
-        if (els.routeResult) els.routeResult.textContent = "Activando GPS… vuelve a pulsar 'Usar mi ubicación'.";
+      } else if (window.VisorAPI && window.VisorAPI.abrirUbicacion) {
+        window.VisorAPI.abrirUbicacion();
+        if (els.routeResult) els.routeResult.textContent = "Abre el panel de ubicación y presiona 'Activar ubicación'.";
       }
     });
     if (els.routeClear) els.routeClear.addEventListener("click", routeLimpiar);
@@ -5907,6 +5913,7 @@
     closeStudy: function () { closeStudy(); },
     startGeo: function () { startGeo(); },
     stopGeo: function () { stopGeo(false); },
+    abrirUbicacion: function () { abrirPanelGeo(); },
     irAlFocoCercano: apiIrAlFocoCercano,
     calcularRuta: function (origen, destino, perfil) { calcularRuta(origen, destino, perfil); },
     rutaDesdeGps: function (destino, perfil) { return rutaDesdeGps(destino, perfil); },

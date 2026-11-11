@@ -5737,16 +5737,33 @@
       apiResaltarDepto(depto);
       return { tipo: "departamento", nombre: prettyDepto(depto) };
     }
-    // Municipio: volar al punto y marcarlo.
+    // Municipio: volar a su polígono y resaltarlo (stroke/fill temporal).
     var muni = (D.municipios || []).find(function (mu) {
       return t.indexOf(normalizarTexto(mu.nombre)) >= 0;
     });
     if (muni) {
-      map.flyTo([muni.lat, muni.lon], 11, { duration: 1.2 });
       highlightGroup.clearLayers();
-      L.circleMarker([muni.lat, muni.lon], { radius: 8, color: "#fff", weight: 2, fillColor: "#f59e0b", fillOpacity: 1 }).addTo(highlightGroup);
-      if (!map.hasLayer(highlightGroup)) highlightGroup.addTo(map);
-      setTimeout(function () { highlightGroup.clearLayers(); }, 5000);
+      var muniFeat = ((D.municipios_geo && D.municipios_geo.features) || []).find(function (f) {
+        return normalizarTexto((f.properties || {}).nombre) === normalizarTexto(muni.nombre);
+      });
+      if (muniFeat) {
+        try {
+          var capa = L.geoJSON(sinPuntos(muniFeat), {
+            style: { color: "#ffd166", weight: 3, opacity: 0.95, fillColor: "#ff8a3c", fillOpacity: 0.35 },
+          });
+          capa.addTo(highlightGroup);
+          if (!map.hasLayer(highlightGroup)) highlightGroup.addTo(map);
+          var b = capa.getBounds();
+          if (b && b.isValid()) map.flyToBounds(b, { padding: [40, 40], duration: 1.3 });
+        } catch (e) {
+          map.flyTo([muni.lat, muni.lon], 11, { duration: 1.2 });
+        }
+      } else {
+        map.flyTo([muni.lat, muni.lon], 11, { duration: 1.2 });
+        L.circleMarker([muni.lat, muni.lon], { radius: 8, color: "#fff", weight: 2, fillColor: "#f59e0b", fillOpacity: 1 }).addTo(highlightGroup);
+        if (!map.hasLayer(highlightGroup)) highlightGroup.addTo(map);
+      }
+      setTimeout(function () { highlightGroup.clearLayers(); }, 6000);
       return { tipo: "municipio", nombre: muni.nombre + (muni.depto ? " · " + prettyDepto(muni.depto) : "") };
     }
     apiBuscar(texto);

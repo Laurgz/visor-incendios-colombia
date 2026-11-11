@@ -256,6 +256,15 @@
     measureValue: $("#measureValue"),
     measureUndo: $("#measureUndo"),
     measureClear: $("#measureClear"),
+    btnRoute: $("#btnRoute"),
+    routePanel: $("#routePanel"),
+    routeClose: $("#routeClose"),
+    routeSetOrigin: $("#routeSetOrigin"),
+    routeSetDest: $("#routeSetDest"),
+    routeUseGps: $("#routeUseGps"),
+    routeResult: $("#routeResult"),
+    routeSteps: $("#routeSteps"),
+    routeClear: $("#routeClear"),
     btnReset: $("#btnReset"),
     btnFullscreen: $("#btnFullscreen"),
     btnGeo: $("#btnGeo"),
@@ -539,7 +548,7 @@
     { id: "agua", name: "Fuentes hídricas", desc: "JRC Surface Water", color: "#3b82f6", kind: "raster", available: !!RASTER.agua },
     { id: "areas", name: "Áreas protegidas", desc: "WDPA · " + fmt((D.areas_puntos || []).length) + " áreas", color: "#a855f7", kind: "areas", available: true },
     { id: "quemadas", name: "Áreas quemadas", desc: "MCD64A1 · por año", color: "#f97316", kind: "quemadas", available: true },
-    { id: "deptos", name: "Departamentos", desc: "FAO GAUL · " + fmt((D.departamentos_puntos || []).length), color: "#e2e8f0", kind: "deptos", available: true },
+    { id: "deptos", name: "Departamentos", desc: "FAO GAUL · " + fmt((D.departamentos_puntos || []).length), color: "#e2e8f0", kind: "deptos", available: true, permanent: true },
     { id: "enso", name: "El Niño (ENSO)", desc: "Re-ponderación climática · amenaza", color: "#f59e0b", kind: "enso", available: true },
     { id: "lst", name: "Temperatura superficial (LST)", desc: "Gradiente térmico · MODIS", color: "#ef4444", kind: "lst", available: !!RASTER.lst },
   ];
@@ -559,6 +568,7 @@
   const geoGroup = L.featureGroup();
   const proximityGroup = L.featureGroup();
   const measureGroup = L.featureGroup();
+  const routeGroup = L.featureGroup();
   let geoWatchId = null;
   let geoMarker = null;
   let geoAccuracy = null;
@@ -1777,7 +1787,7 @@
   /* --------------------------- Capas: controles ------------------------- */
   function buildLayerList() {
     if (!els.layerList) return;
-    els.layerList.innerHTML = LAYERS.map((layer) => {
+    els.layerList.innerHTML = LAYERS.filter(function (l) { return !l.permanent; }).map((layer) => {
       const checked = !!state.layers[layer.id] && layer.available;
       const isPoint = ["focos", "quemadas"].indexOf(layer.kind) >= 0;
       var html =
@@ -1808,6 +1818,7 @@
     const opts = options || {};
     const layer = LAYERS.find((l) => l.id === id);
     if (!layer || !layer.available) return;
+    if (layer.permanent) { state.layers[id] = true; return; }
     state.layers[id] = !!on;
     if (id === "susceptibilidad") renderCloropleta();
     if (id === "enso") {
@@ -1834,7 +1845,7 @@
 
   function applyAllLayers(on) {
     LAYERS.forEach((layer) => {
-      if (!layer.available) return;
+      if (!layer.available || layer.permanent) return;
       state.layers[layer.id] = !!on;
       setLayer(layer.id, on, { silent: true });
     });
@@ -5313,6 +5324,137 @@
     });
   }
 
+  // ==========================================================================
+  // Ruteo interactivo (OSRM): cálculo y trazado de rutas sobre el mapa.
+  // ==========================================================================
+  const routeState = { activo: false, origen: null, destino: null, esperando: null };
+
+  function routeLimpiar() {
+    routeState.origen = null;
+    routeState.destino = null;
+    routeState.esperando = null;
+    routeGroup.clearLayers();
+    if (els.routeResult) els.routeResult.textContent = "Selecciona origen y destino, o usa tu ubicación.";
+    if (els.routeSteps) els.routeSteps.innerHTML = "";
+  }
+
+  function routeDibujarPunto(latlng, color) {
+    return L.circleMarker(latlng, { radius: 7, color: "#fff", weight: 2, fillColor: color, fillOpacity: 1 }).addTo(routeGroup);
+  }
+
+  function routeOnMapClick(e) {
+    if (!routeState.esperando) return;
+    var pt = { lat: e.latlng.lat, lon: e.latlng.lng };
+    if (routeState.esperando === "origen") {
+      routeState.origen = pt;
+      routeDibujarPunto([pt.lat, pt.lon], "#22c55e");
+      if (els.routeSetOrigin) els.routeSetOrigin.textContent = "📍 Origen: " + pt.lat.toFixed(3) + ", " + pt.lon.toFixed(3);
+    } else if (routeState.esperando === "destino") {
+      routeState.destino = pt;
+      routeDibujarPunto([pt.lat, pt.lon], "#ef4444");
+      if (els.routeSetDest) els.routeSetDest.textContent = "🏁 Destino: " + pt.lat.toFixed(3) + ", " + pt.lon.toFixed(3);
+    }
+    routeState.esperando = null;
+    if (routeState.origen && routeState.destino) {
+      calcularRuta(routeState.origen, routeState.destino);
+    }
+  }
+
+  function calcularRuta(origen, destino) {
+    if (els.routeResult) els.routeResult.textContent = "Calculando ruta…";
+    var url = "https://router.project-osrm.org/route/v1/driving/" +
+      origen.lon + "," + origen.lat + ";" + destino.lon + "," + destino.lat +
+      "?overview=full&geometries=geojson&steps=true";
+    fetch(url)
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (data) {
+        var ruta = data.routes && data.routes[0];
+        if (!ruta) throw new Error("Sin ruta");
+        routeGroup.clearLayers();
+        routeDibujarPunto([origen.lat, origen.lon], "#22c55e");
+        routeDibujarPunto([destino.lat, destino.lon], "#ef4444");
+        var coords = (ruta.geometry && ruta.geometry.coordinates) || [];
+        var latlngs = coords.map(function (c) { return [c[1], c[0]]; });
+        L.polyline(latlngs, { color: "#2563eb", weight: 4, opacity: 0.9 }).addTo(routeGroup);
+        if (latlngs.length) map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40] });
+        var km = (ruta.distance / 1000).toFixed(1);
+        var min = Math.round(ruta.duration / 60);
+        if (els.routeResult) {
+          els.routeResult.textContent = "Distancia: " + km + " km · Tiempo estimado: " + min + " min";
+        }
+        // Pasos de navegación.
+        var pasos = [];
+        var piernas = ruta.legs || [];
+        piernas.forEach(function (leg) {
+          (leg.steps || []).forEach(function (s) {
+            var nombre = s.name || "camino";
+            var dist = (s.distance / 1000).toFixed(1);
+            var t = Math.max(1, Math.round(s.duration / 60));
+            var icono = "→";
+            if (s.maneuver && s.maneuver.modifier) {
+              icono = { left: "←", right: "→", "slight left": "↖", "slight right": "↗", straight: "↑", uturn: "↩" }[s.maneuver.modifier] || "→";
+            }
+            pasos.push('<div class="route-step"><span>' + icono + '</span><span>' + esc(nombre) +
+              " <small>" + dist + " km · " + t + " min</small></span></div>");
+          });
+        });
+        if (els.routeSteps) els.routeSteps.innerHTML = pasos.join("");
+        Toast.success("Ruta calculada", km + " km · " + min + " min estimados", "ruta");
+      })
+      .catch(function (err) {
+        console.error("Ruta:", err);
+        if (els.routeResult) els.routeResult.textContent = "No se pudo calcular la ruta (¿sin conexión o puntos muy lejanos?).";
+      });
+  }
+
+  function rutaDesdeGps(destino) {
+    if (!state.geo || state.geo.lat == null) return null;
+    calcularRuta({ lat: state.geo.lat, lon: state.geo.lon }, destino);
+    return true;
+  }
+
+  function initRouting() {
+    routeGroup.addTo(map);
+    if (!els.btnRoute) return;
+    els.btnRoute.addEventListener("click", function () {
+      routeState.activo = !routeState.activo;
+      if (routeState.activo) {
+        els.routePanel.classList.remove("hidden");
+        els.btnRoute.classList.add("active");
+        map.on("click", routeOnMapClick);
+      } else {
+        els.routePanel.classList.add("hidden");
+        els.btnRoute.classList.remove("active");
+        map.off("click", routeOnMapClick);
+      }
+    });
+    if (els.routeClose) els.routeClose.addEventListener("click", function () {
+      routeState.activo = false;
+      els.routePanel.classList.add("hidden");
+      els.btnRoute.classList.remove("active");
+      map.off("click", routeOnMapClick);
+    });
+    if (els.routeSetOrigin) els.routeSetOrigin.addEventListener("click", function () {
+      routeState.esperando = "origen";
+      els.routeSetOrigin.textContent = "📍 Origen: haz clic en el mapa…";
+    });
+    if (els.routeSetDest) els.routeSetDest.addEventListener("click", function () {
+      routeState.esperando = "destino";
+      els.routeSetDest.textContent = "🏁 Destino: haz clic en el mapa…";
+    });
+    if (els.routeUseGps) els.routeUseGps.addEventListener("click", function () {
+      if (state.geo && state.geo.lat != null) {
+        routeState.origen = { lat: state.geo.lat, lon: state.geo.lon };
+        routeDibujarPunto([state.geo.lat, state.geo.lon], "#22c55e");
+        if (els.routeSetOrigin) els.routeSetOrigin.textContent = "📍 Origen: tu ubicación";
+      } else if (window.VisorAPI && window.VisorAPI.startGeo) {
+        window.VisorAPI.startGeo();
+        if (els.routeResult) els.routeResult.textContent = "Activando GPS… vuelve a pulsar 'Usar mi ubicación'.";
+      }
+    });
+    if (els.routeClear) els.routeClear.addEventListener("click", routeLimpiar);
+  }
+
   // Descarga de datos filtrados en formatos GIS abiertos.
   function descargarArchivo(nombre, contenido, tipo) {
     const blob = new Blob([contenido], { type: tipo });
@@ -5388,6 +5530,7 @@
     initRiesgo();
     initEnso();
     initMeasure();
+    initRouting();
     setYear(state.year, { silent: true, toastIt: false });
     updateLegend();
     updateMapEmpty();
@@ -5589,6 +5732,18 @@
     startGeo: function () { startGeo(); },
     stopGeo: function () { stopGeo(false); },
     irAlFocoCercano: apiIrAlFocoCercano,
+    calcularRuta: function (origen, destino) { calcularRuta(origen, destino); },
+    rutaDesdeGps: function (destino) { return rutaDesdeGps(destino); },
+    rutaAlFocoCercano: function () {
+      var nf = nearestFoco();
+      if (!nf) return false;
+      if (state.geo && state.geo.lat != null) {
+        rutaDesdeGps({ lat: nf.item.lat, lon: nf.item.lon });
+      } else {
+        calcularRuta({ lat: BOUNDS[0][0], lon: BOUNDS[0][1] }, { lat: nf.item.lat, lon: nf.item.lon });
+      }
+      return true;
+    },
     setBasemap: apiSetBasemap,
     setEnso: apiSetEnso,
     buscar: apiBuscar,

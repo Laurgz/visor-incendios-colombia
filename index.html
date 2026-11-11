@@ -343,6 +343,9 @@
           <button type="button" class="icon-btn" id="btnMeasure" title="Medir distancia y área" aria-label="Medir distancia y área">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21 21 3"/><path d="M3 3h6M3 3v6"/><circle cx="15" cy="15" r="3"/></svg>
           </button>
+          <button type="button" class="icon-btn" id="btnRoute" title="Calcular ruta" aria-label="Calcular ruta entre dos puntos">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h6"/></svg>
+          </button>
           <button type="button" class="icon-btn" id="btnReset" title="Centrar en Colombia" aria-label="Centrar en Colombia">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
           </button>
@@ -408,6 +411,23 @@
         <div class="measure-actions">
           <button type="button" class="btn ghost small" id="measureUndo">Deshacer</button>
           <button type="button" class="btn ghost small" id="measureClear">Limpiar</button>
+        </div>
+      </div>
+
+      <div class="route-panel hidden" id="routePanel" role="region" aria-label="Cálculo de ruta">
+        <header class="measure-head">
+          <strong id="routeState">Ruta</strong>
+          <button type="button" id="routeClose" aria-label="Cerrar ruta">×</button>
+        </header>
+        <div class="route-fields">
+          <button type="button" class="btn ghost small" id="routeSetOrigin">📍 Origen: clic en el mapa</button>
+          <button type="button" class="btn ghost small" id="routeSetDest">🏁 Destino: clic en el mapa</button>
+          <button type="button" class="btn ghost small" id="routeUseGps">📡 Usar mi ubicación</button>
+        </div>
+        <div class="route-result" id="routeResult">Selecciona origen y destino, o usa tu ubicación.</div>
+        <div class="route-steps" id="routeSteps"></div>
+        <div class="measure-actions">
+          <button type="button" class="btn ghost small" id="routeClear">Limpiar</button>
         </div>
       </div>
 

@@ -408,6 +408,13 @@
       var nf = API ? API.irAlFocoCercano() : null;
       return { texto: nf ? "Te llevo al foco más cercano." : "No encontré focos para el año actual." };
     }
+    // Ruteo interactivo: trazar ruta (desde el GPS) hasta el foco más cercano.
+    if (/ruta|trayecto|como llego|cómo llego|como llegar|cómo llegar|calcular ruta/.test(t)) {
+      if (API && API.rutaAlFocoCercano) {
+        var ok = API.rutaAlFocoCercano();
+        return { texto: ok ? "Calculando la ruta al foco más cercano." : "No pude calcular la ruta. Activa tu ubicación o elige los puntos en el mapa." };
+      }
+    }
 
     // mapa base
     if (/satelital|satélite|satelite|vista satelital|imagen satelital/.test(t)) {

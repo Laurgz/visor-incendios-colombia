@@ -265,6 +265,7 @@
     routeResult: $("#routeResult"),
     routeSteps: $("#routeSteps"),
     routeClear: $("#routeClear"),
+    routeProfile: $("#routeProfile"),
     btnReset: $("#btnReset"),
     btnFullscreen: $("#btnFullscreen"),
     btnGeo: $("#btnGeo"),
@@ -5360,9 +5361,42 @@
     }
   }
 
-  function calcularRuta(origen, destino) {
+  const RUTA_VELOCIDAD = { driving: 60, foot: 5, bike: 15 };
+  const RUTA_NOMBRES = { driving: "Conducción", foot: "A pie", bike: "Bicicleta" };
+
+  function perfilRuta() {
+    return els.routeProfile ? els.routeProfile.value : "driving";
+  }
+
+  // Modo offline: línea recta geodésica con tiempo estimado según el perfil.
+  function rutaGeodesica(origen, destino, perfil) {
+    var km = haversineKm(origen.lat, origen.lon, destino.lat, destino.lon);
+    var vel = RUTA_VELOCIDAD[perfil] || 60;
+    var min = Math.round((km / vel) * 60);
+    routeGroup.clearLayers();
+    routeDibujarPunto([origen.lat, origen.lon], "#22c55e");
+    routeDibujarPunto([destino.lat, destino.lon], "#ef4444");
+    L.polyline([[origen.lat, origen.lon], [destino.lat, destino.lon]], {
+      color: "#2563eb", weight: 3, dashArray: "6 6", opacity: 0.8,
+    }).addTo(routeGroup);
+    map.fitBounds(L.latLngBounds([[origen.lat, origen.lon], [destino.lat, destino.lon]]), { padding: [40, 40] });
+    if (els.routeResult) {
+      els.routeResult.textContent = "Sin conexión · línea recta: " + km.toFixed(1) + " km · ~" + min + " min (" + (RUTA_NOMBRES[perfil] || "—") + ")";
+    }
+    if (els.routeSteps) {
+      els.routeSteps.innerHTML = '<div class="route-step"><span>→</span><span>Modo offline: distancia geodésica aproximada, sin pasos de navegación.</span></div>';
+    }
+  }
+
+  function calcularRuta(origen, destino, perfil) {
+    var p = perfil || perfilRuta();
     if (els.routeResult) els.routeResult.textContent = "Calculando ruta…";
-    var url = "https://router.project-osrm.org/route/v1/driving/" +
+    // Sin conexión: fallback directo a línea recta.
+    if (navigator.onLine === false) {
+      rutaGeodesica(origen, destino, p);
+      return;
+    }
+    var url = "https://router.project-osrm.org/route/v1/" + p + "/" +
       origen.lon + "," + origen.lat + ";" + destino.lon + "," + destino.lat +
       "?overview=full&geometries=geojson&steps=true";
     fetch(url)
@@ -5380,7 +5414,7 @@
         var km = (ruta.distance / 1000).toFixed(1);
         var min = Math.round(ruta.duration / 60);
         if (els.routeResult) {
-          els.routeResult.textContent = "Distancia: " + km + " km · Tiempo estimado: " + min + " min";
+          els.routeResult.textContent = "Distancia: " + km + " km · Tiempo estimado: " + min + " min (" + (RUTA_NOMBRES[p] || "—") + ")";
         }
         // Pasos de navegación.
         var pasos = [];
@@ -5403,7 +5437,7 @@
       })
       .catch(function (err) {
         console.error("Ruta:", err);
-        if (els.routeResult) els.routeResult.textContent = "No se pudo calcular la ruta (¿sin conexión o puntos muy lejanos?).";
+        rutaGeodesica(origen, destino, p);
       });
   }
 
@@ -5453,6 +5487,9 @@
       }
     });
     if (els.routeClear) els.routeClear.addEventListener("click", routeLimpiar);
+    if (els.routeProfile) els.routeProfile.addEventListener("change", function () {
+      if (routeState.origen && routeState.destino) calcularRuta(routeState.origen, routeState.destino);
+    });
   }
 
   // Descarga de datos filtrados en formatos GIS abiertos.

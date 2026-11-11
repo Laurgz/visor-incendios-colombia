@@ -423,6 +423,13 @@
           <button type="button" class="btn ghost small" id="routeSetOrigin">📍 Origen: clic en el mapa</button>
           <button type="button" class="btn ghost small" id="routeSetDest">🏁 Destino: clic en el mapa</button>
           <button type="button" class="btn ghost small" id="routeUseGps">📡 Usar mi ubicación</button>
+          <label class="select-wrap">Modo
+            <select id="routeProfile">
+              <option value="driving" selected>Conducción</option>
+              <option value="foot">A pie</option>
+              <option value="bike">Bicicleta</option>
+            </select>
+          </label>
         </div>
         <div class="route-result" id="routeResult">Selecciona origen y destino, o usa tu ubicación.</div>
         <div class="route-steps" id="routeSteps"></div>

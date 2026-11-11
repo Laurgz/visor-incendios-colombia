@@ -248,6 +248,11 @@
     map: $("#map"),
     btnMenu: $("#btnMenu"),
     btnBasemap: $("#btnBasemap"),
+    btnQrAccess: $("#btnQrAccess"),
+    qrAccessPanel: $("#qrAccessPanel"),
+    qrAccessCanvas: $("#qrAccessCanvas"),
+    qrAccessClose: $("#qrAccessClose"),
+    qrAccessUrl: $("#qrAccessUrl"),
     btnMeasure: $("#btnMeasure"),
     measurePanel: $("#measurePanel"),
     measureClose: $("#measureClose"),
@@ -3392,6 +3397,38 @@
   }, 140);
 
   /* ------------------------------- QR ------------------------------------ */
+  // URL principal de la aplicación (a la que apunta el QR de Acceso Rápido Web).
+  const URL_PRINCIPAL = "https://laurgz.github.io/visor-incendios-colombia/";
+
+  function renderQrAcceso() {
+    if (!els.qrAccessCanvas) return;
+    drawQR(els.qrAccessCanvas, URL_PRINCIPAL, 200);
+    if (els.qrAccessUrl) els.qrAccessUrl.textContent = URL_PRINCIPAL;
+  }
+
+  function initQrAcceso() {
+    if (!els.btnQrAccess || !els.qrAccessPanel) return;
+    function abrir() {
+      renderQrAcceso();
+      els.qrAccessPanel.classList.remove("hidden");
+      els.btnQrAccess.classList.add("active");
+    }
+    function cerrar() {
+      els.qrAccessPanel.classList.add("hidden");
+      els.btnQrAccess.classList.remove("active");
+    }
+    els.btnQrAccess.addEventListener("click", function () {
+      if (els.qrAccessPanel.classList.contains("hidden")) abrir();
+      else cerrar();
+    });
+    if (els.qrAccessClose) els.qrAccessClose.addEventListener("click", cerrar);
+    document.addEventListener("click", function (e) {
+      if (els.qrAccessPanel.classList.contains("hidden")) return;
+      if (els.qrAccessPanel.contains(e.target) || els.btnQrAccess.contains(e.target)) return;
+      cerrar();
+    });
+  }
+
   function shareUrl() {
     const base = location.href.split("#")[0].split("?")[0];
     const params = new URLSearchParams();
@@ -5546,6 +5583,7 @@
     initDepartamentos();
     initRiesgo();
     initMeasure();
+    initQrAcceso();
     initRouting();
     setYear(state.year, { silent: true, toastIt: false });
     updateLegend();

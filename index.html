@@ -331,8 +331,8 @@
           <button type="button" class="icon-btn" id="btnBasemap" title="Cambiar mapa base" aria-label="Cambiar mapa base">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 18 9 5 9-5"/></svg>
           </button>
-          <button type="button" class="icon-btn" id="btnMeasure" title="Medir distancia y área" aria-label="Medir distancia y área">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21 21 3"/><path d="M3 3h6M3 3v6"/><circle cx="15" cy="15" r="3"/></svg>
+          <button type="button" class="icon-btn" id="btnQrAccess" title="Acceso Rápido Web" aria-label="Acceso Rápido Web (código QR)">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1.2"/><rect x="15" y="3" width="6" height="6" rx="1.2"/><rect x="3" y="15" width="6" height="6" rx="1.2"/><path d="M15 15h2v2h-2zM19 15h2v2h-2zM15 19h2v2h-2zM19 19h2v2h-2z"/></svg>
           </button>
           <button type="button" class="icon-btn" id="btnRoute" title="Calcular ruta" aria-label="Calcular ruta entre dos puntos">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h6"/></svg>
@@ -403,6 +403,18 @@
           <button type="button" class="btn ghost small" id="measureUndo">Deshacer</button>
           <button type="button" class="btn ghost small" id="measureClear">Limpiar</button>
         </div>
+      </div>
+
+      <div class="qr-access-panel hidden" id="qrAccessPanel" role="region" aria-label="Acceso Rápido Web">
+        <header class="measure-head">
+          <strong id="qrAccessTitle">Acceso Rápido Web</strong>
+          <button type="button" id="qrAccessClose" aria-label="Cerrar acceso rápido">×</button>
+        </header>
+        <div class="qr-access-frame">
+          <canvas id="qrAccessCanvas" aria-label="Código QR de acceso al visor"></canvas>
+        </div>
+        <p class="qr-access-url" id="qrAccessUrl">https://laurgz.github.io/visor-incendios-colombia/</p>
+        <p class="qr-access-hint">Apunta la cámara de tu móvil al código para abrir el visor al instante, sin escribir la dirección.</p>
       </div>
 
       <div class="route-panel hidden" id="routePanel" role="region" aria-label="Cálculo de ruta">
@@ -636,6 +648,7 @@
 
   <script src="vendor/leaflet.js"></script>
   <script src="vendor/jspdf.umd.min.js"></script>
+  <script src="vendor/qrcode.js"></script>
   <script src="data.js"></script>
   <script src="script.js"></script>
   <script src="js/flami.js"></script>

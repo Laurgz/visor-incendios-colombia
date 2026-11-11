@@ -4419,6 +4419,59 @@ input[type="range"]::-moz-range-thumb {
   justify-content: center;
 }
 
+/* Acceso Rápido Web (QR) */
+.qr-access-panel {
+  position: absolute;
+  top: 62px;
+  right: 14px;
+  z-index: 520;
+  width: 250px;
+  padding: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  background: rgba(13, 21, 35, 0.94);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.qr-access-panel.hidden {
+  display: none;
+}
+
+.qr-access-frame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  margin: 6px auto 10px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+}
+
+#qrAccessCanvas {
+  display: block;
+  border-radius: 4px;
+}
+
+.qr-access-url {
+  margin: 0 0 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #a5f3fc;
+  word-break: break-all;
+}
+
+.qr-access-hint {
+  margin: 0;
+  font-size: 9.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+
 /* Ruteo interactivo (OSRM) */
 .route-panel {
   position: absolute;

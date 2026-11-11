@@ -236,14 +236,21 @@
     setEstado("procesando");
     var partes = parsearCompuesto(texto);
     var respuestas = [];
+    var despedida = false;
     for (var i = 0; i < partes.length; i++) {
       var r = nlu(partes[i]);
       if (r && r.texto) respuestas.push(r.texto);
+      if (/^(adios|adiós|chao|chau|hasta luego|hasta pronto|hasta manana|hasta mañana|nos vemos|me voy|me retiro|bye|hasta la proxima|hasta la próxima|buenas noches)\b/.test(normalizar(partes[i]))) despedida = true;
     }
     var textoFinal = respuestas.length ? respuestas.join(" ") : "No te entendí. Pide 'ayuda'.";
     mostrarBurbuja(textoFinal);
     hablar(textoFinal);
-    resetIdle();
+    if (despedida) {
+      // Dejar que Flami termine de despedirse y luego ocultarse.
+      setTimeout(function () { desactivar(); }, 3200);
+    } else {
+      resetIdle();
+    }
   }
 
   // Parser de comandos compuestos: divide por conjunciones y comas.
@@ -266,6 +273,9 @@
     }
     if (t === "flami" || t === "flami,") {
       return { texto: "¡Aquí estoy! Dime qué necesitas." };
+    }
+    if (/^(adios|adiós|chao|chau|hasta luego|hasta pronto|hasta manana|hasta mañana|nos vemos|me voy|me retiro|bye|hasta la proxima|hasta la próxima|buenas noches)\b/.test(t)) {
+      return { texto: "¡Hasta luego! Gracias por explorar el visor conmigo. Nos vemos pronto. ¡Cuídate mucho!" };
     }
     if (/como estas|que haces|como te sientes/.test(t)) {
       return { texto: "¡Estoy genial y llena de energía! Pídeme activar capas, cambiar de año o buscar un municipio." };

@@ -222,6 +222,7 @@
     yearPill: $("#yearPill"),
     yearScale: $("#yearScale"),
     yearChips: $("#yearChips"),
+    yearPlay: $("#yearPlay"),
     statFocos: $("#statFocos"),
     statQuemadas: $("#statQuemadas"),
     statAreas: $("#statAreas"),
@@ -539,6 +540,7 @@
   let basemap = "sat";
   let searchTimer = null;
   let yearTimer = null;
+  let yearPlayTimer = null;
   let lastResults = [];
 
   const groups = {};
@@ -1942,6 +1944,30 @@
     scheduleStudyRefresh();
   }
 
+  // Reproducción animada de focos por año (Time Slider).
+  function toggleYearPlay() {
+    if (yearPlayTimer) {
+      clearInterval(yearPlayTimer);
+      yearPlayTimer = null;
+      if (els.yearPlay) els.yearPlay.textContent = "▶ Reproducir animación";
+      return;
+    }
+    const anios = ANIOS.slice();
+    let i = 0;
+    setYear(anios[0], { silent: true, toastIt: false });
+    if (els.yearPlay) els.yearPlay.textContent = "⏸ Detener animación";
+    yearPlayTimer = setInterval(function () {
+      i += 1;
+      if (i >= anios.length) {
+        clearInterval(yearPlayTimer);
+        yearPlayTimer = null;
+        if (els.yearPlay) els.yearPlay.textContent = "▶ Reproducir animación";
+        return;
+      }
+      setYear(anios[i], { silent: true, toastIt: false });
+    }, 900);
+  }
+
   function setYear(year, options) {
     const opts = options || {};
     state.year = year;
@@ -2417,6 +2443,8 @@
       const value = chip.dataset.year === "todos" ? null : Number(chip.dataset.year);
       setYear(value, { silent: false, toastIt: true, mark: true });
     });
+
+    els.yearPlay.addEventListener("click", toggleYearPlay);
 
     els.layersAll.addEventListener("click", () => applyAllLayers(true));
     els.layersNone.addEventListener("click", () => applyAllLayers(false));
@@ -4225,9 +4253,6 @@
       UI.integralReportMeta.textContent = (state.year == null ? "Todos los años" : "Año " + state.year) +
         " · " + (partes.length ? partes.join(" · ") : "sin capas activas");
     }
-    const url = shareUrl();
-    drawQR(UI.integralQr, url, 132);
-    if (UI.integralQrUrl) UI.integralQrUrl.textContent = url;
     updateSyncUI();
     dibujarIgac(UI.integralIgac, "a4l", { legend: true, grid: true });
   }
@@ -4383,7 +4408,7 @@
       if (state.studyTab === "integral") refreshIntegral();
       else if (state.studyTab === "informe") refreshReportPreview();
       else if (state.studyTab === "igac") drawIgacTab();
-      else if (state.studyTab === "qr") renderQrTab();
+      else if (state.studyTab === "riesgo") renderRiesgo();
     }, 180);
   }
 
@@ -4395,13 +4420,11 @@
     show("btnExportPdf", tab === "integral" || tab === "informe");
     show("btnDownloadMapPdf", tab === "integral" || tab === "igac");
     show("btnDownloadPng", tab === "integral" || tab === "igac");
-    show("btnDownloadQr", tab === "integral" || tab === "qr");
-    show("btnCopyLink", true);
     const hints = {
       integral: "Mapa e informe son documentos independientes; ambos incluyen solo las capas activas.",
       informe: "El informe se exporta como PDF independiente del mapa, con las capas activas.",
       igac: "El mapa se exporta en PNG o PDF con marco, rosa, retícula, leyenda y escala.",
-      qr: "El QR se actualiza con el año, la categoría y la búsqueda activos.",
+      riesgo: "Riesgo por departamento calculado a partir de los focos y áreas quemadas del periodo.",
     };
     if (UI.studyHint) UI.studyHint.textContent = hints[tab] || hints.integral;
   }
@@ -4411,7 +4434,7 @@
     $$("#studyTabs button").forEach(function (btn) {
       btn.classList.toggle("active", btn.dataset.stab === tab);
     });
-    const panes = { integral: "paneIntegral", informe: "paneInforme", igac: "paneIgac", qr: "paneQr", riesgo: "paneRiesgo" };
+    const panes = { integral: "paneIntegral", informe: "paneInforme", igac: "paneIgac", riesgo: "paneRiesgo" };
     Object.keys(panes).forEach(function (key) {
       const pane = document.getElementById(panes[key]);
       if (pane) pane.classList.toggle("active", key === tab);
@@ -4422,8 +4445,6 @@
       refreshReportPreview();
     } else if (tab === "igac") {
       drawIgacTab();
-    } else if (tab === "qr") {
-      renderQrTab();
     } else if (tab === "riesgo") {
       renderRiesgo();
     } else {
@@ -5135,7 +5156,6 @@
     initStudy();
     initGeo();
     initFirms();
-    initQuickQr();
     initDepartamentos();
     initRiesgo();
     initEnso();
@@ -5178,7 +5198,7 @@
 
     // Enlace directo al centro de estudio: ?study=integral|informe|igac|qr
     const pStudy = params.get("study");
-    if (pStudy && ["integral", "informe", "igac", "qr"].indexOf(pStudy) !== -1) {
+    if (pStudy && ["integral", "informe", "igac", "riesgo"].indexOf(pStudy) !== -1) {
       setTimeout(function () { openStudy(pStudy); }, 320);
     }
 

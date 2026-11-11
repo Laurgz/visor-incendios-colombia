@@ -112,6 +112,7 @@
             <span>Focos y quemadas</span>
           </div>
           <input type="range" id="yearRange" min="2012" max="2026" step="1" value="2026" aria-label="Seleccionar año">
+          <button type="button" class="btn ghost small year-play" id="yearPlay">▶ Reproducir animación</button>
           <div class="year-scale" id="yearScale"></div>
           <div class="chips" id="yearChips">
             <button type="button" class="chip" data-year="todos">Todos</button>
@@ -261,10 +262,6 @@
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3 3 5v16l6-2 6 2 6-2V3l-6 2-6-2Z"/><path d="M9 3v16M15 5v16"/></svg>
               <span><strong>Mapa IGAC</strong><small>Plano cartográfico</small></span>
             </button>
-            <button type="button" class="study-hub-btn" data-study-open="qr">
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 20h2M20 14h1"/></svg>
-              <span><strong>Código QR</strong><small>Compartir la vista</small></span>
-            </button>
           </div>
           <div class="study-hub-actions">
             <button type="button" class="btn ghost small" id="hubExportReport">Informe PDF</button>
@@ -395,23 +392,6 @@
         </div>
       </div>
 
-      <button type="button" class="quick-qr-fab" id="btnQuickQr" title="QR para compartir esta vista" aria-label="Mostrar código QR para compartir">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M17 20h4M20 20v1"/></svg>
-      </button>
-
-      <div class="quick-qr-card hidden" id="quickQrCard" role="region" aria-label="Código QR para compartir la vista">
-        <header class="quick-qr-head">
-          <strong>Compartir esta vista</strong>
-          <button type="button" id="quickQrClose" aria-label="Cerrar QR">×</button>
-        </header>
-        <div class="quick-qr-canvas-wrap"><canvas id="quickQrCanvas" aria-label="Código QR de la vista actual"></canvas></div>
-        <small class="quick-qr-caption" id="quickQrCaption">Año 2026 · focos y quemadas</small>
-        <div class="quick-qr-actions">
-          <button type="button" id="quickQrCopy">Copiar enlace</button>
-          <button type="button" id="quickQrDownload">Descargar PNG</button>
-        </div>
-      </div>
-
       <div class="map-legend" id="legend">
         <div class="legend-head">
           <strong>Leyenda</strong>
@@ -482,11 +462,10 @@
       </header>
 
       <nav class="modal-tabs study-tabs" id="studyTabs" aria-label="Secciones del estudio">
-        <button type="button" class="active" data-stab="integral">Vista integral</button>
-        <button type="button" data-stab="informe">Informe</button>
-        <button type="button" data-stab="igac">Mapa IGAC</button>
-        <button type="button" data-stab="qr">Código QR</button>
-        <button type="button" data-stab="riesgo">Riesgo</button>
+        <button type="button" class="active" data-stab="integral">Reporte Nacional</button>
+        <button type="button" data-stab="informe">Exportador</button>
+        <button type="button" data-stab="igac">Cartografía</button>
+        <button type="button" data-stab="riesgo">Análisis Territorial</button>
       </nav>
 
       <div class="modal-body study-body" id="studyBody">
@@ -516,11 +495,6 @@
                 <div class="integral-paper" id="integralReport"></div>
               </div>
               <div class="integral-side">
-                <div class="integral-card integral-qr">
-                  <div class="integral-card-head"><strong>Acceso móvil</strong><span>QR dinámico</span></div>
-                  <canvas id="integralQr"></canvas>
-                  <small id="integralQrUrl">—</small>
-                </div>
                 <div class="integral-card integral-sync">
                   <div class="integral-card-head"><strong>Offline y sincronización</strong><span id="integralNet">En línea</span></div>
                   <div class="integral-sync-row"><span id="integralSyncText">Todo guardado</span><button type="button" class="mini-sync" id="integralSyncNow">Sincronizar</button></div>
@@ -533,7 +507,6 @@
               <button type="button" class="btn ghost" id="integralMapPdf">Exportar mapa PDF</button>
               <button type="button" class="btn ghost" id="integralPng">Descargar mapa PNG</button>
               <button type="button" class="btn ghost" id="integralGoReport">Editar informe</button>
-              <button type="button" class="btn ghost" id="integralGoQr">Ver QR</button>
             </div>
           </div>
         </section>
@@ -591,39 +564,6 @@
         </section>
 
         <!-- QR -->
-        <section class="pane study-pane" id="paneQr">
-          <div class="qr-stage">
-            <div class="qr-card">
-              <span class="eyebrow">Acceso inmediato</span>
-              <h3>Escanea y abre esta vista</h3>
-              <div class="qr-canvas-wrap"><canvas id="qrCanvas" aria-label="Código QR de la vista actual"></canvas></div>
-              <p class="qr-caption" id="qrCaption">Año 2026 · focos y quemadas</p>
-              <div class="qr-link">
-                <input id="qrLink" type="text" readonly aria-label="Enlace de la vista">
-                <button type="button" class="btn small primary" id="qrCopy">Copiar</button>
-              </div>
-              <div class="qr-actions">
-                <button type="button" class="btn ghost small" id="qrDownload">Descargar PNG</button>
-                <button type="button" class="btn ghost small" id="qrOpen">Abrir enlace</button>
-              </div>
-              <p class="hint">El QR se regenera con el año, la categoría y la búsqueda activos. Para compartirlo en celulares, publica el HTML en una URL accesible o usa un servidor local.</p>
-            </div>
-            <div class="qr-side">
-              <div class="qr-side-card">
-                <span class="eyebrow">Vista actual</span>
-                <strong id="qrYear">2026</strong>
-                <p id="qrSummary">—</p>
-              </div>
-              <div class="qr-side-card">
-                <span class="eyebrow">Sincronización</span>
-                <strong id="qrSyncState">En línea</strong>
-                <p id="qrSyncText">Todo guardado en este dispositivo.</p>
-                <button type="button" class="btn ghost small" id="qrSyncNow">Sincronizar ahora</button>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <!-- RIESGO -->
         <section class="pane study-pane" id="paneRiesgo">
           <div class="risk-stage">
@@ -643,8 +583,6 @@
           <button type="button" class="btn primary" id="btnExportPdf">Exportar informe PDF</button>
           <button type="button" class="btn ghost" id="btnDownloadMapPdf">Exportar mapa PDF</button>
           <button type="button" class="btn ghost" id="btnDownloadPng">Descargar mapa PNG</button>
-          <button type="button" class="btn ghost" id="btnDownloadQr">Descargar QR</button>
-          <button type="button" class="btn ghost" id="btnCopyLink">Copiar enlace</button>
           <button type="button" class="btn ghost" id="studyClose">Cerrar</button>
         </div>
       </footer>
@@ -652,7 +590,6 @@
   </div>
 
   <script src="vendor/leaflet.js"></script>
-  <script src="vendor/qrcode.js"></script>
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="data.js"></script>
   <script src="script.js"></script>

@@ -359,7 +359,7 @@
       if (API) API.setEnso(false, "neutro");
       return { texto: "Contexto de El Niño desactivado." };
     }
-    if (/el niño|el nino|fenomeno del niño|fenómeno del niño|niño severo|nino severo|niño moderado|nino moderado|activa enso/.test(t)) {
+    if (/el nino|fenomeno nino|fenomeno del nino|nino severo|nino moderado|activa enso/.test(t)) {
       if (!API) return { texto: "No puedo ajustar El Niño ahora mismo." };
       if (/severo/.test(t)) { API.setEnso(true, "severo"); return { texto: "El Niño severo activado. Aumenté la susceptibilidad a incendios." }; }
       if (/moderado/.test(t)) { API.setEnso(true, "moderado"); return { texto: "El Niño moderado activado." }; }
@@ -569,7 +569,7 @@
     { categoria: "Saludos", comandos: ["Hola Flami", "¿Cómo estás?", "¿Quién eres?", "Gracias"] },
     { categoria: "Despedida", comandos: ["Adiós Flami", "Chao Flami"] },
     { categoria: "Reporte", comandos: ["Dame el reporte de hoy", "Haz un resumen de incendios"] },
-    { categoria: "El Niño y clima", comandos: ["Activa El Niño severo", "Apaga fenómeno Niño", "Enciende temperatura"] },
+    { categoria: "El Niño y clima", comandos: ["Activa fenómeno Niño", "Activa El Niño severo", "Apaga fenómeno Niño", "Enciende temperatura"] },
     { categoria: "Capas", comandos: ["Activa focos 2020", "Apaga bosques", "Activa susceptibilidad", "Activa agua", "Todas las capas", "Ninguna capa"] },
     { categoria: "Tiempo", comandos: ["Pon el año 2020", "Reproduce la animación"] },
     { categoria: "GPS y foco", comandos: ["Mi ubicación", "Foco más cercano"] },

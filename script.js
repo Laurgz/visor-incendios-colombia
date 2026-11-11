@@ -540,6 +540,8 @@
     { id: "areas", name: "Áreas protegidas", desc: "WDPA · " + fmt((D.areas_puntos || []).length) + " áreas", color: "#a855f7", kind: "areas", available: true },
     { id: "quemadas", name: "Áreas quemadas", desc: "MCD64A1 · por año", color: "#f97316", kind: "quemadas", available: true },
     { id: "deptos", name: "Departamentos", desc: "FAO GAUL · " + fmt((D.departamentos_puntos || []).length), color: "#e2e8f0", kind: "deptos", available: true },
+    { id: "enso", name: "El Niño (ENSO)", desc: "Re-ponderación climática · amenaza", color: "#f59e0b", kind: "enso", available: true },
+    { id: "lst", name: "Temperatura superficial (LST)", desc: "Gradiente térmico · GEE", color: "#ef4444", kind: "lst", available: false },
   ];
 
   let map = null;
@@ -1776,7 +1778,7 @@
     els.layerList.innerHTML = LAYERS.map((layer) => {
       const checked = !!state.layers[layer.id] && layer.available;
       const isPoint = ["focos", "quemadas"].indexOf(layer.kind) >= 0;
-      return (
+      var html =
         '<label class="layer-row' + (layer.available ? "" : " disabled") + '"' +
           (layer.available ? "" : ' title="La capa se habilitará cuando el modelo termine de procesarse."') + ">" +
           '<span class="layer-swatch' + (isPoint ? " ring" : "") + '" style="--c:' + layer.color + '"></span>' +
@@ -1785,8 +1787,18 @@
           '<span class="switch"><input type="checkbox" data-layer="' + layer.id + '"' +
             (checked ? " checked" : "") + (layer.available ? "" : " disabled") + ">" +
             '<span class="slider"></span></span>' +
-        "</label>"
-      );
+        "</label>";
+      if (layer.id === "enso") {
+        html +=
+          '<div class="layer-enso-controls' + (checked ? "" : " hidden") + '" id="ensoLayerControls">' +
+            '<select id="ensoLayerIntensity" aria-label="Intensidad de El Niño">' +
+              '<option value="neutro"' + (ensoIntensidad === "neutro" ? " selected" : "") + '>Neutro</option>' +
+              '<option value="moderado"' + (ensoIntensidad === "moderado" ? " selected" : "") + '>Moderado</option>' +
+              '<option value="severo"' + (ensoIntensidad === "severo" ? " selected" : "") + '>Severo</option>' +
+            '</select>' +
+          '</div>';
+      }
+      return html;
     }).join("");
   }
 
@@ -1796,6 +1808,10 @@
     if (!layer || !layer.available) return;
     state.layers[id] = !!on;
     if (id === "susceptibilidad") renderCloropleta();
+    if (id === "enso") {
+      // La capa El Niño activa/desactiva la re-ponderación climática.
+      apiSetEnso(!!on, ensoIntensidad);
+    }
     const group = groups[id];
     if (group) {
       if (on) {
@@ -2458,9 +2474,18 @@
     els.layersAll.addEventListener("click", () => applyAllLayers(true));
     els.layersNone.addEventListener("click", () => applyAllLayers(false));
     els.layerList.addEventListener("change", (event) => {
+      if (event.target && event.target.id === "ensoLayerIntensity") {
+        ensoIntensidad = event.target.value;
+        if (ensoActivo) apiSetEnso(true, ensoIntensidad);
+        return;
+      }
       const cb = event.target.closest("input[data-layer]");
       if (!cb) return;
       setLayer(cb.dataset.layer, cb.checked);
+      if (cb.dataset.layer === "enso") {
+        const controls = document.getElementById("ensoLayerControls");
+        if (controls) controls.classList.toggle("hidden", !cb.checked);
+      }
     });
 
     els.searchInput.addEventListener("input", () => {
@@ -3193,6 +3218,20 @@
     const secciones = [];
     secciones.push({ title: "Resumen ejecutivo", html: "<p>" + esc(obs) + "</p>" });
     secciones.push({ title: "Metodología", html: "<p>" + esc(metodologiaActiva()) + "</p>" });
+
+    // Capítulo de diagnóstico climático cuando El Niño está activo.
+    if (ensoActivo || capaActiva("enso")) {
+      secciones.push({
+        title: "Diagnóstico climático · Fenómeno de El Niño",
+        html: '<p>Se encuentra activo el contexto de <strong>El Niño ' + esc(ensoIntensidad) + '</strong>. ' +
+          'Este fenómeno reduce las lluvias y eleva la temperatura superficial (LST), incrementando la ' +
+          'sequedad de la vegetación y, con ello, la susceptibilidad a incendios forestales. ' +
+          'La re-ponderación climática aplicada multiplica el riesgo por un factor de ' +
+          (ensoIntensidad === "severo" ? "1.5" : ensoIntensidad === "moderado" ? "1.25" : "1.0") +
+          '. Se recomienda intensificar la vigilancia, restringir quemas controladas y priorizar los ' +
+          'municipios con mayor densidad de focos.</p>',
+      });
+    }
 
     let resultados = "";
     if (usaFocos || usaQuemadas) {
@@ -3969,6 +4008,11 @@
     ctx.fillStyle = "#0f172a";
     ctx.font = "bold " + Math.round(W * 0.017) + "px Arial";
     ctx.fillText("MAPA NACIONAL DE INCENDIOS FORESTALES", margen + 74, headerY + 48);
+    if (ensoActivo) {
+      ctx.fillStyle = "#b91c1c";
+      ctx.font = "bold " + Math.round(W * 0.0105) + "px Arial";
+      ctx.fillText("REPORTE NACIONAL · AMENAZA POR EL NIÑO", margen + 74, headerY + 70);
+    }
     ctx.fillStyle = "#475569";
     ctx.font = Math.round(W * 0.0085) + "px Arial";
     ctx.fillText(
@@ -5442,11 +5486,16 @@
     const toggle = document.getElementById("ensoToggle");
     const sel = document.getElementById("ensoIntensity");
     const pill = document.getElementById("ensoPill");
+    const selLayer = document.getElementById("ensoLayerIntensity");
+    const ensoCb = document.querySelector('#layerList input[data-layer="enso"]');
     if (toggle) toggle.checked = ensoActivo;
     if (sel && intensidad) sel.value = intensidad;
+    if (selLayer) selLayer.value = ensoIntensidad;
+    if (ensoCb) ensoCb.checked = ensoActivo;
     if (pill) pill.textContent = ensoActivo ? (ensoIntensidad.charAt(0).toUpperCase() + ensoIntensidad.slice(1)) : "Desactivado";
     if (capaActiva("susceptibilidad")) renderCloropleta();
     if (deptoSeleccionado) actualizarInfoDepto();
+    scheduleStudyRefresh();
   }
 
   function apiBuscar(texto) {

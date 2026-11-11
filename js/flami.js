@@ -305,7 +305,7 @@
           "Estamos analizando el año " + res.anio + ", con " + res.focos + " focos activos y " +
           res.quemadas + " áreas quemadas. En total hay " + res.totalFocos + " focos históricos registrados. ";
         if (res.ensoActivo) {
-          resumen += "Hay alerta de El Niño " + res.ensoIntensidad + ", así que la susceptibilidad a incendios está aumentada. ¡Mucho cuidado con las quemas!";
+          resumen += "Hay alerta de El Niño " + res.ensoIntensidad + ", con temperaturas superficiales elevadas y mayor sequedad, así que la susceptibilidad a incendios está aumentada. ¡Mucho cuidado con las quemas!";
         } else {
           resumen += "No hay alerta de El Niño activa en este momento.";
         }
@@ -350,6 +350,11 @@
     if (/desactiva el niño|apaga el niño|sin niño|desactiva el nino|apaga el nino/.test(t)) {
       if (API) API.setEnso(false, "neutro");
       return { texto: "Contexto de El Niño desactivado." };
+    }
+
+    // Temperatura superficial (LST): capa pendiente de datos GEE.
+    if (/temperatura|lst|termica|térmica|termico|térmico/.test(t)) {
+      return { texto: "La capa de temperatura superficial (LST) requiere los datos de Google Earth Engine, que aún están pendientes de procesar." };
     }
 
     // capas
@@ -457,6 +462,8 @@
     "areas": ["areas protegidas", "áreas protegidas", "parques", "protegidas", "pnn"],
     "quemadas": ["quemadas", "quemada", "areas quemadas", "áreas quemadas", "cicatrices"],
     "deptos": ["departamentos", "departamento", "limites", "límites"],
+    "enso": ["el nino", "el niño", "nino", "niño", "enso"],
+    "lst": ["temperatura", "temperatura superficial", "lst", "termica", "térmica", "termico", "térmico"],
   };
 
   function encontrarCapa(texto) {

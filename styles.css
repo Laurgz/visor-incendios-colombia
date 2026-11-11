@@ -4058,6 +4058,25 @@ input[type="range"]::-moz-range-thumb {
   font-size: 11px;
 }
 
+.layer-enso-controls {
+  margin: 6px 0 2px 34px;
+}
+
+.layer-enso-controls.hidden {
+  display: none;
+}
+
+.layer-enso-controls select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  background: rgba(8, 13, 23, 0.55);
+  color: var(--text);
+  font-size: 10px;
+}
+
 .depto-select:focus {
   border-color: rgba(255, 90, 60, 0.5);
 }

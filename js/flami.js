@@ -8,12 +8,16 @@
 
   var WAKE_WORD = "hola flami";
   var IDLE_MS = 3 * 60 * 1000; // ocultar tras 3 minutos de inactividad
+  var SILENCIO_MS = 7000;      // debouncer: esperar 7 s de silencio para procesar
   var PITCH = 1.7;             // voz aguda y tierna
   var RATE = 1.1;
 
   var activo = false;
   var escuchando = false;
+  var hablando = false;        // half-duplex: la síntesis bloquea el micrófono
   var idleTimer = null;
+  var silencioTimer = null;
+  var bufferTexto = "";
   var recognition = null;
   var historial = [];
 
@@ -78,6 +82,9 @@
   // ------------------------------------------------------------- voz (TTS)
   function hablar(texto) {
     if (!window.speechSynthesis) { return; }
+    // Half-duplex: bloquear el micrófono mientras Flami habla.
+    detenerMic();
+    hablando = true;
     window.speechSynthesis.cancel();
     var u = new SpeechSynthesisUtterance(texto);
     u.lang = "es-ES";
@@ -89,8 +96,19 @@
     }) || voces.find(function (v) { return /es/i.test(v.lang); });
     if (fem) u.voice = fem;
     u.onstart = function () { setEstado("hablando"); };
-    u.onend = function () { if (activo) setEstado("escuchando"); };
+    u.onend = function () {
+      hablando = false;
+      if (activo) { setEstado("escuchando"); reiniciarEscucha(); }
+      else { setEstado("en espera"); }
+    };
     window.speechSynthesis.speak(u);
+  }
+
+  function detenerMic() {
+    if (recognition && escuchando) {
+      try { recognition.stop(); } catch (e) {}
+    }
+    escuchando = false;
   }
 
   // ---------------------------------------------------- reconocimiento (STT)
@@ -112,13 +130,10 @@
       }
       finalText = (finalText || "").toLowerCase().trim();
       if (!finalText) return;
-      // Despertar con la frase clave "Hola Flami".
-      if (!activo && finalText.indexOf(WAKE_WORD) >= 0) {
-        guardarHistorial("voz", finalText);
-        activar();
-        return;
-      }
-      if (activo) procesar(finalText);
+      bufferTexto += (bufferTexto ? " " : "") + finalText;
+      // Debouncer de silencio: esperar 7 s sin hablar para procesar.
+      if (silencioTimer) clearTimeout(silencioTimer);
+      silencioTimer = setTimeout(procesarBuffer, SILENCIO_MS);
     };
     recognition.onerror = function (e) {
       escuchando = false;
@@ -128,14 +143,30 @@
     };
     recognition.onend = function () {
       escuchando = false;
-      // Reactivar la escucha: pasiva (buscando la frase clave) o activa.
-      if (activo) setEstado("escuchando");
-      reiniciarEscucha();
+      if (bufferTexto.trim()) {
+        if (silencioTimer) clearTimeout(silencioTimer);
+        procesarBuffer();
+        return;
+      }
+      if (!hablando) reiniciarEscucha();
     };
   }
 
+  function procesarBuffer() {
+    if (silencioTimer) { clearTimeout(silencioTimer); silencioTimer = null; }
+    var texto = bufferTexto.trim();
+    bufferTexto = "";
+    if (!texto) return;
+    if (!activo && texto.indexOf(WAKE_WORD) >= 0) {
+      guardarHistorial("voz", texto);
+      activar();
+      return;
+    }
+    if (activo) procesar(texto);
+  }
+
   function reiniciarEscucha() {
-    if (!recognition || escuchando) return;
+    if (!recognition || escuchando || hablando) return;
     try {
       escuchando = true;
       recognition.start();
@@ -198,10 +229,27 @@
   function procesar(texto) {
     guardarHistorial("comando", texto);
     setEstado("procesando");
-    var r = nlu(texto);
-    mostrarBurbuja(r.texto);
-    hablar(r.texto);
+    var partes = parsearCompuesto(texto);
+    var respuestas = [];
+    for (var i = 0; i < partes.length; i++) {
+      var r = nlu(partes[i]);
+      if (r && r.texto) respuestas.push(r.texto);
+    }
+    var textoFinal = respuestas.length ? respuestas.join(" ") : "No te entendí. Pide 'ayuda'.";
+    mostrarBurbuja(textoFinal);
+    hablar(textoFinal);
     resetIdle();
+  }
+
+  // Parser de comandos compuestos: divide por conjunciones y comas.
+  function parsearCompuesto(texto) {
+    var t = String(texto);
+    // Proteger coordenadas ("4.6, -74.1") para que la coma no separe el par.
+    t = t.replace(/(\d)\s*,\s*(-?\d)/g, "$1~COMA~$2");
+    return t
+      .split(/\s*(?:,\s*|\s+y\s+|\s+luego\s+|\s+despu[eé]s\s+|\s+entonces\s+|\s+y tambi[eé]n\s+|\s+adem[aá]s\s+)/i)
+      .map(function (p) { return p.trim().replace(/~COMA~/g, ", "); })
+      .filter(function (p) { return p.length > 0; });
   }
 
   function nlu(texto) {
@@ -231,7 +279,13 @@
       return { texto: "Puedo activar o apagar capas, cambiar el año, ajustar El Niño, activar tu GPS, buscar municipios, cambiar el mapa base, abrir el centro de estudio y exportar informes. Prueba con 'activa focos' o 'pon el año 2020'." };
     }
 
-    // exportar informe
+    // exportar mapa (JPG/PNG)
+    if (/exportar|exporta|descargar|descarga/.test(t) && /mapa|jpg|png|imagen/.test(t)) {
+      if (API) API.descargarMapa();
+      return { texto: "Exportando el mapa en imagen." };
+    }
+
+    // exportar informe (PDF)
     if (/exportar|descargar|generar/.test(t) && /informe|reporte|pdf/.test(t)) {
       if (API) API.exportarInforme();
       return { texto: "Generando el informe en PDF." };
@@ -258,21 +312,24 @@
     // capas
     if (/activa|enciende|muestra|pon|prende|ver/.test(t)) {
       var capa = encontrarCapa(t);
-      if (capa) { if (API) API.setLayer(capa.id, true); return { texto: "Capa " + capa.name + " activada." }; }
+      if (capa) {
+        if (API) API.setLayer(capa.id, true);
+        var anioCapa = t.match(/en\s+(20\d\d|19\d\d)/);
+        if (anioCapa && API) API.setYear(anioCapa[1]);
+        return { texto: "Capa " + capa.name + " activada" + (anioCapa ? " para el año " + anioCapa[1] : "") + "." };
+      }
     }
     if (/desactiva|apaga|quita|oculta|esconde/.test(t)) {
       var capa2 = encontrarCapa(t);
       if (capa2) { if (API) API.setLayer(capa2.id, false); return { texto: "Capa " + capa2.name + " desactivada." }; }
     }
-    if (/todas las capas/.test(t)) {
-      var lista = API ? API.listaCapas : [];
-      if (API) lista.forEach(function (c) { API.setLayer(c.id, true); });
+    if (/todas las capas|enciende todas|activa todas/.test(t)) {
+      if (API) API.setAllLayers(true);
       return { texto: "Todas las capas activadas." };
     }
-    if (/ninguna capa|quita todas las capas/.test(t)) {
-      var lista2 = API ? API.listaCapas : [];
-      if (API) lista2.forEach(function (c) { API.setLayer(c.id, false); });
-      return { texto: "Capas desactivadas." };
+    if (/ninguna capa|quita todas las capas|apaga todas|desactiva todas/.test(t)) {
+      if (API) API.setAllLayers(false);
+      return { texto: "Todas las capas desactivadas." };
     }
 
     // año / time slider
@@ -306,17 +363,18 @@
       return { texto: "Cambiando al mapa de calles." };
     }
 
-    // departamentos
-    var depto = encontrarDepto(t);
-    if (depto && /departamento|enfoca|enfócate|ir a|muestra|ver|busca|buscar/.test(t)) {
-      if (API) API.enfocarDepto(depto);
-      return { texto: "Enfocando el departamento de " + depto + "." };
-    }
-
-    // búsqueda genérica
-    if (/busca|buscar|busco/.test(t)) {
-      var q = t.replace(/busca|buscar|busco/, "").trim();
-      if (q && API) { API.buscar(q); return { texto: "Buscando " + q + "." }; }
+    // búsqueda territorial universal (departamento, municipio, vereda, cuenca, coordenadas)
+    if (/busca|buscar|busco|enfoca|enfócate|ir a|llevame a|llévame a|vamos a|muestrame|muéstrame|ubicame en|ubícame en|municipio|vereda|cuenca|coordenadas|departamento/.test(t)) {
+      if (API && API.searchTerritory) {
+        var objetivo = t
+          .replace(/busca|buscar|busco|enfoca|enfócate|ir a|llevame a|llévame a|vamos a|muestrame|muéstrame|ubicame en|ubícame en|el departamento de|el municipio de|la vereda de|la cuenca de|departamento|municipio|vereda|cuenca|coordenadas/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (objetivo) {
+          var res = API.searchTerritory(objetivo);
+          if (res && res.nombre) return { texto: "Enfocando " + res.nombre + " en el mapa." };
+        }
+      }
     }
 
     // conocimiento técnico

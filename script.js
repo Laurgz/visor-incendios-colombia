@@ -5456,6 +5456,29 @@
     runSearch({ silent: true });
   }
 
+  // Buscador territorial universal: coordenadas, departamentos o texto libre.
+  function apiBuscarTerritorio(texto) {
+    if (!map) return { tipo: "error", nombre: texto };
+    var m = texto.match(/(-?\d+(?:\.\d+)?)\s*[,;]\s*(-?\d+(?:\.\d+)?)/);
+    if (m) {
+      var lat = parseFloat(m[1]);
+      var lon = parseFloat(m[2]);
+      if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+        map.setView([lat, lon], 12, { animate: true, duration: 0.8 });
+        return { tipo: "coordenadas", nombre: lat.toFixed(4) + ", " + lon.toFixed(4) };
+      }
+    }
+    var t = texto.toLowerCase();
+    var deptos = (D.departamentos_puntos || []).map(function (d) { return d.nombre; });
+    var depto = deptos.find(function (d) { return t.indexOf(d.toLowerCase()) >= 0; });
+    if (depto) {
+      enfocarDepto(depto);
+      return { tipo: "departamento", nombre: prettyDepto(depto) };
+    }
+    apiBuscar(texto);
+    return { tipo: "busqueda", nombre: texto };
+  }
+
   function apiIrAlFocoCercano() {
     const nf = nearestFoco();
     if (!nf || !map) return null;
@@ -5475,6 +5498,10 @@
       var cb = document.querySelector('#layerList input[data-layer="' + id + '"]');
       if (cb) cb.checked = !!state.layers[id];
     },
+    setAllLayers: function (on) {
+      LAYERS.forEach(function (l) { if (l.available) setLayer(l.id, !!on, { silent: true }); });
+      $$("#layerList input[data-layer]").forEach(function (cb) { cb.checked = !!on; });
+    },
     openStudy: function (t) { openStudy(t || "integral"); },
     startGeo: function () { startGeo(); },
     stopGeo: function () { stopGeo(false); },
@@ -5482,7 +5509,9 @@
     setBasemap: apiSetBasemap,
     setEnso: apiSetEnso,
     buscar: apiBuscar,
+    searchTerritory: apiBuscarTerritorio,
     exportarInforme: function () { exportReportPdf(); },
+    descargarMapa: function () { downloadIgacPng(); },
     enfocarDepto: function (nombre) { enfocarDepto(nombre); },
     toggleYearPlay: function () { toggleYearPlay(); },
     getEstado: function () {
@@ -5495,6 +5524,7 @@
     listaCapas: LAYERS.map(function (l) { return { id: l.id, name: l.name }; }),
     listaDeptos: (D.departamentos_puntos || []).map(function (d) { return d.nombre; }),
   };
+  window.searchTerritory = apiBuscarTerritorio;
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);

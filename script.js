@@ -5737,6 +5737,18 @@
       apiResaltarDepto(depto);
       return { tipo: "departamento", nombre: prettyDepto(depto) };
     }
+    // Municipio: volar al punto y marcarlo.
+    var muni = (D.municipios || []).find(function (mu) {
+      return t.indexOf(normalizarTexto(mu.nombre)) >= 0;
+    });
+    if (muni) {
+      map.flyTo([muni.lat, muni.lon], 11, { duration: 1.2 });
+      highlightGroup.clearLayers();
+      L.circleMarker([muni.lat, muni.lon], { radius: 8, color: "#fff", weight: 2, fillColor: "#f59e0b", fillOpacity: 1 }).addTo(highlightGroup);
+      if (!map.hasLayer(highlightGroup)) highlightGroup.addTo(map);
+      setTimeout(function () { highlightGroup.clearLayers(); }, 5000);
+      return { tipo: "municipio", nombre: muni.nombre + (muni.depto ? " · " + prettyDepto(muni.depto) : "") };
+    }
     apiBuscar(texto);
     return { tipo: "busqueda", nombre: texto };
   }
@@ -5748,7 +5760,7 @@
     return nf;
   }
 
-  // Devuelve {lat, lon, nombre} de un lugar (departamento o coordenadas).
+  // Devuelve {lat, lon, nombre} de un lugar (departamento, municipio o coordenadas).
   function apiObtenerCoordenadas(texto) {
     var m = String(texto).match(/(-?\d+(?:\.\d+)?)\s*[,;]\s*(-?\d+(?:\.\d+)?)/);
     if (m) {
@@ -5761,6 +5773,10 @@
       return t.indexOf(normalizarTexto(d.nombre)) >= 0;
     });
     if (depto) return { lat: depto.lat, lon: depto.lon, nombre: prettyDepto(depto.nombre) };
+    var muni = (D.municipios || []).find(function (mu) {
+      return t.indexOf(normalizarTexto(mu.nombre)) >= 0;
+    });
+    if (muni) return { lat: muni.lat, lon: muni.lon, nombre: muni.nombre + (muni.depto ? " · " + prettyDepto(muni.depto) : "") };
     return null;
   }
 

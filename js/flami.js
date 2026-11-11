@@ -63,6 +63,10 @@
     personaje.innerHTML =
       '<div class="flami-bubble" id="flamiBubble"><span id="flamiBubbleText">¡Hola! Soy Flami</span></div>' +
       '<div class="flami-avatar">' + FLAMI_SVG + '</div>' +
+      '<div class="flami-input-row">' +
+        '<input id="flamiInput" type="text" placeholder="Escribe un comando…" autocomplete="off" aria-label="Escribir comando para Flami">' +
+        '<button id="flamiSend" type="button" aria-label="Enviar comando">➤</button>' +
+      '</div>' +
       '<div class="flami-status" id="flamiStatus"><span class="flami-dot"></span><span id="flamiStatusText">en espera</span></div>';
     document.body.appendChild(personaje);
 
@@ -92,29 +96,46 @@
   // ---------------------------------------------------- reconocimiento (STT)
   function initRecognition() {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
+    if (!SR) {
+      if (el) mostrarBurbuja("Tu navegador no soporta el reconocimiento de voz. Escribe tus comandos abajo.");
+      return;
+    }
     recognition = new SR();
     recognition.lang = "es-ES";
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
     recognition.onresult = function (event) {
-      var texto = (event.results[0][0].transcript || "").toLowerCase().trim();
-      if (texto) procesar(texto);
+      var finalText = "";
+      for (var i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) finalText += event.results[i][0].transcript + " ";
+      }
+      finalText = (finalText || "").toLowerCase().trim();
+      if (!finalText) return;
+      // Despertar con la frase clave "Hola Flami".
+      if (!activo && finalText.indexOf(WAKE_WORD) >= 0) {
+        guardarHistorial("voz", finalText);
+        activar();
+        return;
+      }
+      if (activo) procesar(finalText);
     };
-    recognition.onerror = function () { setEstado("alerta"); };
+    recognition.onerror = function (e) {
+      escuchando = false;
+      if ((e.error === "not-allowed" || e.error === "service-not-allowed") && el) {
+        mostrarBurbuja("Activa el permiso del micrófono o escribe tus comandos abajo.");
+      }
+    };
     recognition.onend = function () {
       escuchando = false;
-      if (activo) {
-        setEstado("escuchando");
-        reiniciarEscucha();
-      } else {
-        setEstado("en espera");
-      }
+      // Reactivar la escucha: pasiva (buscando la frase clave) o activa.
+      if (activo) setEstado("escuchando");
+      reiniciarEscucha();
     };
   }
 
   function reiniciarEscucha() {
-    if (!recognition || !activo || escuchando) return;
+    if (!recognition || escuchando) return;
     try {
       escuchando = true;
       recognition.start();
@@ -327,11 +348,28 @@
     return { texto: "No te entendí bien. Prueba con 'activa focos', 'pon el año 2020' o pide 'ayuda'." };
   }
 
+  var CAPA_ALIASES = {
+    "susceptibilidad": ["susceptibilidad", "riesgo", "susceptible"],
+    "focos": ["focos", "focos de calor", "calor", "incendios", "incendio"],
+    "bosques": ["bosque", "bosques", "forestal"],
+    "agua": ["agua", "hidricas", "hídricas", "rios", "ríos", "lagos", "cuerpos de agua"],
+    "areas": ["areas protegidas", "áreas protegidas", "parques", "protegidas", "pnn"],
+    "quemadas": ["quemadas", "quemada", "areas quemadas", "áreas quemadas", "cicatrices"],
+    "deptos": ["departamentos", "departamento", "limites", "límites"],
+  };
+
   function encontrarCapa(texto) {
     var API = window.VisorAPI;
     if (!API || !API.listaCapas) return null;
     var t = texto.toLowerCase();
-    return API.listaCapas.find(function (c) { return t.indexOf(c.name.toLowerCase()) >= 0; }) || null;
+    for (var i = 0; i < API.listaCapas.length; i++) {
+      var capa = API.listaCapas[i];
+      var aliases = CAPA_ALIASES[capa.id] || [capa.name.toLowerCase()];
+      for (var j = 0; j < aliases.length; j++) {
+        if (t.indexOf(aliases[j]) >= 0) return capa;
+      }
+    }
+    return null;
   }
 
   function encontrarDepto(texto) {
@@ -342,18 +380,46 @@
   }
 
   // ------------------------------------------------------------------ init
+  var pasivoIniciado = false;
+
+  function iniciarPasivo() {
+    if (pasivoIniciado || !recognition || activo || escuchando) return;
+    pasivoIniciado = true;
+    try { recognition.start(); escuchando = true; } catch (e) { escuchando = false; }
+  }
+
   function init() {
     el = crearDOM();
     el.btn.addEventListener("click", function () {
       if (activo) desactivar();
       else activar();
     });
+
+    // Entrada por teclado (respaldo si no hay micrófono o permiso).
+    var input = el.personaje.querySelector("#flamiInput");
+    var send = el.personaje.querySelector("#flamiSend");
+    if (input && send) {
+      var enviar = function () {
+        var texto = input.value.trim();
+        if (!texto) return;
+        input.value = "";
+        procesar(texto);
+      };
+      send.addEventListener("click", enviar);
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); enviar(); }
+      });
+    }
+
     // precargar voces
     if (window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = function () { window.speechSynthesis.getVoices(); };
       window.speechSynthesis.getVoices();
     }
     initRecognition();
+    // Escucha pasiva: tras el primer clic del usuario se activa el micrófono
+    // para detectar "Hola Flami" en segundo plano.
+    document.addEventListener("click", iniciarPasivo, { passive: true });
   }
 
   if (document.readyState === "loading") {

@@ -340,6 +340,9 @@
           <button type="button" class="icon-btn" id="btnBasemap" title="Cambiar mapa base" aria-label="Cambiar mapa base">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 18 9 5 9-5"/></svg>
           </button>
+          <button type="button" class="icon-btn" id="btnMeasure" title="Medir distancia y área" aria-label="Medir distancia y área">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21 21 3"/><path d="M3 3h6M3 3v6"/><circle cx="15" cy="15" r="3"/></svg>
+          </button>
           <button type="button" class="icon-btn" id="btnReset" title="Centrar en Colombia" aria-label="Centrar en Colombia">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
           </button>
@@ -389,6 +392,22 @@
         <div class="geo-actions">
           <button type="button" class="btn ghost small" id="geoCenter">Centrar en mí</button>
           <button type="button" class="btn ghost small" id="geoStop">Detener</button>
+        </div>
+      </div>
+
+      <div class="measure-panel hidden" id="measurePanel" role="region" aria-label="Herramienta de medición">
+        <header class="measure-head">
+          <strong id="measureState">Medición</strong>
+          <button type="button" id="measureClose" aria-label="Cerrar medición">×</button>
+        </header>
+        <div class="measure-modes">
+          <button type="button" class="active" id="measureDist">Distancia</button>
+          <button type="button" id="measureArea">Área</button>
+        </div>
+        <div class="measure-value" id="measureValue">Haz clic en el mapa para medir.</div>
+        <div class="measure-actions">
+          <button type="button" class="btn ghost small" id="measureUndo">Deshacer</button>
+          <button type="button" class="btn ghost small" id="measureClear">Limpiar</button>
         </div>
       </div>
 
@@ -583,6 +602,8 @@
           <button type="button" class="btn primary" id="btnExportPdf">Exportar informe PDF</button>
           <button type="button" class="btn ghost" id="btnDownloadMapPdf">Exportar mapa PDF</button>
           <button type="button" class="btn ghost" id="btnDownloadPng">Descargar mapa PNG</button>
+          <button type="button" class="btn ghost" id="btnDownloadGeojson">Descargar GeoJSON</button>
+          <button type="button" class="btn ghost" id="btnDownloadKml">Descargar KML</button>
           <button type="button" class="btn ghost" id="studyClose">Cerrar</button>
         </div>
       </footer>

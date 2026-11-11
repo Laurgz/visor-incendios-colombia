@@ -248,6 +248,14 @@
     map: $("#map"),
     btnMenu: $("#btnMenu"),
     btnBasemap: $("#btnBasemap"),
+    btnMeasure: $("#btnMeasure"),
+    measurePanel: $("#measurePanel"),
+    measureClose: $("#measureClose"),
+    measureDist: $("#measureDist"),
+    measureArea: $("#measureArea"),
+    measureValue: $("#measureValue"),
+    measureUndo: $("#measureUndo"),
+    measureClear: $("#measureClear"),
     btnReset: $("#btnReset"),
     btnFullscreen: $("#btnFullscreen"),
     btnGeo: $("#btnGeo"),
@@ -548,6 +556,7 @@
   const highlightGroup = L.featureGroup();
   const geoGroup = L.featureGroup();
   const proximityGroup = L.featureGroup();
+  const measureGroup = L.featureGroup();
   let geoWatchId = null;
   let geoMarker = null;
   let geoAccuracy = null;
@@ -2653,6 +2662,8 @@
     btnExportPdf: $("#btnExportPdf"),
     btnDownloadMapPdf: $("#btnDownloadMapPdf"),
     btnDownloadPng: $("#btnDownloadPng"),
+    btnDownloadGeojson: $("#btnDownloadGeojson"),
+    btnDownloadKml: $("#btnDownloadKml"),
     btnDownloadQr: $("#btnDownloadQr"),
     btnCopyLink: $("#btnCopyLink"),
   };
@@ -4499,6 +4510,8 @@
     if (UI.btnExportPdf) UI.btnExportPdf.addEventListener("click", exportReportPdf);
     if (UI.btnDownloadMapPdf) UI.btnDownloadMapPdf.addEventListener("click", exportMapPdf);
     if (UI.btnDownloadPng) UI.btnDownloadPng.addEventListener("click", downloadIgacPng);
+    if (UI.btnDownloadGeojson) UI.btnDownloadGeojson.addEventListener("click", descargarGeoJSON);
+    if (UI.btnDownloadKml) UI.btnDownloadKml.addEventListener("click", descargarKML);
     if (UI.btnDownloadQr) UI.btnDownloadQr.addEventListener("click", function () {
       renderQrTab();
       descargarCanvas(UI.qrCanvas, "qr_visor_incendios_" + (state.year || "todos") + ".png");
@@ -5125,6 +5138,163 @@
     aplicar();
   }
 
+  // Herramienta de medición geométrica: distancia (km) y área (km² / ha).
+  const measureState = { active: false, mode: "distancia", points: [] };
+  let measurePolyline = null;
+  let measurePolygon = null;
+  let measureMarkers = [];
+
+  function measureLimpiaDibujos() {
+    if (measurePolyline) { measureGroup.removeLayer(measurePolyline); measurePolyline = null; }
+    if (measurePolygon) { measureGroup.removeLayer(measurePolygon); measurePolygon = null; }
+    measureMarkers.forEach(function (m) { measureGroup.removeLayer(m); });
+    measureMarkers = [];
+  }
+
+  function measureDistanciaKm(points) {
+    let total = 0;
+    for (let i = 1; i < points.length; i++) {
+      total += haversineKm(points[i - 1].lat, points[i - 1].lon, points[i].lat, points[i].lon);
+    }
+    return total;
+  }
+
+  function measureAreaKm2(points) {
+    if (points.length < 3) return 0;
+    const n = points.length;
+    const latMean = points.reduce(function (s, p) { return s + p.lat; }, 0) / n * Math.PI / 180;
+    const kx = 111.320 * Math.cos(latMean);
+    const ky = 110.574;
+    let area = 0;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      area += (points[i].lon * kx) * (points[j].lat * ky) - (points[j].lon * kx) * (points[i].lat * ky);
+    }
+    return Math.abs(area) / 2;
+  }
+
+  function measureActualizar() {
+    const pts = measureState.points;
+    measureLimpiaDibujos();
+    if (!pts.length) {
+      if (els.measureValue) els.measureValue.textContent = "Haz clic en el mapa para medir.";
+      return;
+    }
+    const latlngs = pts.map(function (p) { return [p.lat, p.lon]; });
+    latlngs.forEach(function (ll) {
+      const m = L.circleMarker(ll, { radius: 4, color: "#22d3ee", weight: 2, fillColor: "#0e7490", fillOpacity: 1, interactive: false });
+      m.addTo(measureGroup);
+      measureMarkers.push(m);
+    });
+    if (measureState.mode === "distancia") {
+      measurePolyline = L.polyline(latlngs, { color: "#22d3ee", weight: 3, dashArray: "6 4" }).addTo(measureGroup);
+      const km = measureDistanciaKm(pts);
+      if (els.measureValue) els.measureValue.textContent = fmt(km.toFixed(2)) + " km";
+    } else {
+      if (pts.length >= 3) {
+        measurePolygon = L.polygon(latlngs, { color: "#22d3ee", weight: 2, fillColor: "#22d3ee", fillOpacity: 0.18 }).addTo(measureGroup);
+        const km2 = measureAreaKm2(pts);
+        const ha = km2 * 100;
+        if (els.measureValue) els.measureValue.textContent = fmt(km2.toFixed(2)) + " km² · " + fmt(ha.toFixed(1)) + " ha";
+      } else if (els.measureValue) {
+        els.measureValue.textContent = "Agrega " + (3 - pts.length) + " punto(s) más para calcular el área.";
+      }
+    }
+  }
+
+  function measureOnClick(e) {
+    measureState.points.push({ lat: e.latlng.lat, lon: e.latlng.lng });
+    measureActualizar();
+  }
+
+  function measureDetener() {
+    measureState.active = false;
+    measureState.points = [];
+    measureLimpiaDibujos();
+    if (els.measurePanel) els.measurePanel.classList.add("hidden");
+    if (els.btnMeasure) els.btnMeasure.classList.remove("active");
+    if (map) map.off("click", measureOnClick);
+    if (els.measureValue) els.measureValue.textContent = "Haz clic en el mapa para medir.";
+  }
+
+  function initMeasure() {
+    measureGroup.addTo(map);
+    if (!els.btnMeasure) return;
+    els.btnMeasure.addEventListener("click", function () {
+      if (measureState.active) {
+        measureDetener();
+        return;
+      }
+      measureState.active = true;
+      measureState.points = [];
+      if (els.measurePanel) els.measurePanel.classList.remove("hidden");
+      if (els.btnMeasure) els.btnMeasure.classList.add("active");
+      map.on("click", measureOnClick);
+      measureActualizar();
+    });
+    if (els.measureClose) els.measureClose.addEventListener("click", measureDetener);
+    if (els.measureDist) els.measureDist.addEventListener("click", function () {
+      measureState.mode = "distancia";
+      els.measureDist.classList.add("active");
+      els.measureArea.classList.remove("active");
+      measureActualizar();
+    });
+    if (els.measureArea) els.measureArea.addEventListener("click", function () {
+      measureState.mode = "area";
+      els.measureArea.classList.add("active");
+      els.measureDist.classList.remove("active");
+      measureActualizar();
+    });
+    if (els.measureUndo) els.measureUndo.addEventListener("click", function () {
+      measureState.points.pop();
+      measureActualizar();
+    });
+    if (els.measureClear) els.measureClear.addEventListener("click", function () {
+      measureState.points = [];
+      measureActualizar();
+    });
+  }
+
+  // Descarga de datos filtrados en formatos GIS abiertos.
+  function descargarArchivo(nombre, contenido, tipo) {
+    const blob = new Blob([contenido], { type: tipo });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nombre;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+  }
+
+  function descargarGeoJSON() {
+    const features = [];
+    (focosVisibles(state.year) || []).forEach(function (f) {
+      features.push({ type: "Feature", geometry: { type: "Point", coordinates: [Number(f.lon), Number(f.lat)] }, properties: { tipo: "foco", anio: f.anio, depto: f.depto || "" } });
+    });
+    (quemadasVisibles(state.year) || []).forEach(function (q) {
+      features.push({ type: "Feature", geometry: { type: "Point", coordinates: [Number(q.lon), Number(q.lat)] }, properties: { tipo: "quemada", anio: q.anio, doy: q.doy, depto: q.depto || "" } });
+    });
+    const fc = { type: "FeatureCollection", features: features };
+    descargarArchivo("focos_quemadas_" + (state.year == null ? "todos" : state.year) + ".geojson", JSON.stringify(fc, null, 2), "application/geo+json");
+    Toast.success("GeoJSON generado", fmt(features.length) + " registros descargados.", "geojson");
+  }
+
+  function descargarKML() {
+    const partes = ['<?xml version="1.0" encoding="UTF-8"?>', '<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Incendios Colombia</name>'];
+    (focosVisibles(state.year) || []).forEach(function (f) {
+      partes.push('<Placemark><name>Foco ' + (f.anio || "") + '</name><Point><coordinates>' + Number(f.lon) + ',' + Number(f.lat) + ',0</coordinates></Point></Placemark>');
+    });
+    (quemadasVisibles(state.year) || []).forEach(function (q) {
+      partes.push('<Placemark><name>Quemada ' + (q.anio || "") + '</name><Point><coordinates>' + Number(q.lon) + ',' + Number(q.lat) + ',0</coordinates></Point></Placemark>');
+    });
+    partes.push('</Document></kml>');
+    const total = (focosVisibles(state.year) || []).length + (quemadasVisibles(state.year) || []).length;
+    descargarArchivo("focos_quemadas_" + (state.year == null ? "todos" : state.year) + ".kml", partes.join(""), "application/vnd.google-earth.kml+xml");
+    Toast.success("KML generado", fmt(total) + " registros descargados.", "kml");
+  }
+
 
   function init() {
     if (typeof L === "undefined") {
@@ -5159,6 +5329,7 @@
     initDepartamentos();
     initRiesgo();
     initEnso();
+    initMeasure();
     setYear(state.year, { silent: true, toastIt: false });
     updateLegend();
     updateMapEmpty();

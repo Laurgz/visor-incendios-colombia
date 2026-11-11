@@ -4252,3 +4252,91 @@ input[type="range"]::-moz-range-thumb {
   margin-top: 8px;
   justify-content: center;
 }
+
+/* Medición geométrica (distancia y área) */
+.measure-panel {
+  position: absolute;
+  top: 62px;
+  right: 14px;
+  z-index: 520;
+  width: 240px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 13px;
+  background: rgba(13, 21, 35, 0.92);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+}
+
+.measure-panel.hidden {
+  display: none;
+}
+
+.measure-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.measure-head strong {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.measure-head button {
+  border: 0;
+  background: transparent;
+  color: var(--muted-2);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.measure-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.measure-modes button {
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(8, 13, 23, 0.5);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.measure-modes button.active {
+  border-color: rgba(34, 211, 238, 0.55);
+  background: rgba(8, 145, 178, 0.18);
+  color: #a5f3fc;
+}
+
+.measure-value {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #a5f3fc;
+  font-variant-numeric: tabular-nums;
+}
+
+.measure-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.measure-actions .btn {
+  flex: 1;
+  justify-content: center;
+}
+
+.icon-btn.active {
+  border-color: rgba(34, 211, 238, 0.55);
+  background: rgba(8, 145, 178, 0.2);
+  color: #a5f3fc;
+}

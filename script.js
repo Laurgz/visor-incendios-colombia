@@ -773,6 +773,22 @@
     );
   }
 
+  // Enlace universal a Google Maps para trazar la ruta de conducción más rápida
+  // desde la ubicación del usuario (si el GPS está activo) hasta el punto dado.
+  function botonRutaGoogle(p) {
+    const destino = Number(p.lat) + "," + Number(p.lon);
+    if (state.geoActive && state.geo && state.geo.lat != null) {
+      const origen = state.geo.lat + "," + state.geo.lon;
+      return '<a class="popup-btn route" target="_blank" rel="noopener" ' +
+        'href="https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(origen) +
+        '&destination=' + encodeURIComponent(destino) + '&travelmode=driving">' +
+        "🚗 Trazar ruta más rápida en Google Maps</a>";
+    }
+    return '<a class="popup-btn route" target="_blank" rel="noopener" ' +
+      'href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(destino) + '">' +
+      "📍 Ver en Google Maps</a>";
+  }
+
   function popupFoco(p, nivel) {
     const lv = INTENSIDAD[nivel == null ? 1 : nivel] || INTENSIDAD[1];
     return function () {
@@ -783,6 +799,7 @@
         '<span style="color:' + lv.color + '">● Intensidad relativa ' + esc(lv.label) + "</span>" +
         distanciaHTML(distanciaFocoKm(p), "desde tu ubicación") +
         '<span class="coords">' + Number(p.lat).toFixed(3) + ", " + Number(p.lon).toFixed(3) + "</span>" +
+        botonRutaGoogle(p) +
         "</div>"
       );
     };
@@ -806,6 +823,7 @@
         "<span>Día juliano " + esc(q.doy || "—") + " · polígono ~" + QUEMADA_RADIO_KM + " km</span>" +
         distanciaQuemadaHTML(distanciaQuemadaKm(q)) +
         '<span class="coords">' + Number(q.lat).toFixed(3) + ", " + Number(q.lon).toFixed(3) + "</span>" +
+        botonRutaGoogle(q) +
         "</div>"
       );
     };
@@ -4868,6 +4886,19 @@
 
   let deptoSeleccionado = "";
 
+  // Contexto climático: fenómeno de El Niño (ENSO). Re-pondera la susceptibilidad
+  // dando más peso a la sequía (CHIRPS/SPI) y a la temperatura (LST) según la
+  // intensidad seleccionada. Se aplica como factor multiplicativo del riesgo.
+  let ensoActivo = false;
+  let ensoIntensidad = "neutro";
+
+  function factorEnso() {
+    if (!ensoActivo) return 1;
+    if (ensoIntensidad === "severo") return 1.5;
+    if (ensoIntensidad === "moderado") return 1.25;
+    return 1;
+  }
+
   function calcularRiesgoDeptos() {
     const conteo = {};
     (D.departamentos_puntos || []).forEach(function (d) {
@@ -4897,7 +4928,7 @@
         focos: c.focos,
         quemadas: c.quemadas,
         total: total,
-        riesgo: Math.round((total / max) * 100),
+        riesgo: Math.min(100, Math.round((total / max) * 100 * factorEnso())),
       };
     });
     return resultado;
@@ -5053,6 +5084,26 @@
     renderCloropleta();
   }
 
+  function initEnso() {
+    const toggle = document.getElementById("ensoToggle");
+    const sel = document.getElementById("ensoIntensity");
+    const pill = document.getElementById("ensoPill");
+    function aplicar() {
+      ensoActivo = toggle ? toggle.checked : false;
+      ensoIntensidad = sel ? sel.value : "neutro";
+      if (pill) {
+        pill.textContent = ensoActivo
+          ? (ensoIntensidad.charAt(0).toUpperCase() + ensoIntensidad.slice(1))
+          : "Desactivado";
+      }
+      if (capaActiva("susceptibilidad")) renderCloropleta();
+      if (deptoSeleccionado) actualizarInfoDepto();
+    }
+    if (toggle) toggle.addEventListener("change", aplicar);
+    if (sel) sel.addEventListener("change", aplicar);
+    aplicar();
+  }
+
 
   function init() {
     if (typeof L === "undefined") {
@@ -5087,6 +5138,7 @@
     initQuickQr();
     initDepartamentos();
     initRiesgo();
+    initEnso();
     setYear(state.year, { silent: true, toastIt: false });
     updateLegend();
     updateMapEmpty();

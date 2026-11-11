@@ -153,6 +153,25 @@
           <div class="depto-info" id="deptoInfo"></div>
         </section>
 
+        <!-- Contexto Climático: El Niño -->
+        <section class="card" aria-labelledby="ensoTitle">
+          <div class="section-head">
+            <h2 id="ensoTitle">Contexto Climático · El Niño</h2>
+            <span class="pill neutral" id="ensoPill">Desactivado</span>
+          </div>
+          <label class="check-row compact" style="margin-bottom:8px;">
+            <input type="checkbox" id="ensoToggle"> Activar re-ponderación climática
+          </label>
+          <label class="firms-field">Intensidad
+            <select id="ensoIntensity" aria-label="Intensidad de El Niño">
+              <option value="neutro">Neutro</option>
+              <option value="moderado">Moderado</option>
+              <option value="severo">Severo</option>
+            </select>
+          </label>
+          <p class="hint">El Niño intensifica la susceptibilidad, ponderando la sequía (CHIRPS/SPI) y la temperatura (LST). Periodos históricos críticos: 2002-2003, 2009-2010, 2015-2016 y 2023-2024.</p>
+        </section>
+
         <!-- NASA FIRMS en vivo -->
         <section class="card firms-card" aria-labelledby="firmsTitle">
           <div class="section-head">

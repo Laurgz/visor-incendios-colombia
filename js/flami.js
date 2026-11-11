@@ -424,6 +424,19 @@
       var nf = API ? API.irAlFocoCercano() : null;
       return { texto: nf ? "Te llevo al foco más cercano." : "No encontré focos para el año actual." };
     }
+
+    // Detener acciones activas: búsqueda (resaltado) o ruta (trayecto).
+    if (/deten|detén|detener|parar|para la|cancela|cancelar|limpia|limpiar|quita|quitar|borra|borrar/.test(t)) {
+      if (/ruta|trayecto|recorrido|itinerario|navegacion|navegación/.test(t)) {
+        if (API && API.detenerRuta) { API.detenerRuta(); return { texto: "Ruta detenida. Trayecto y marcadores eliminados." }; }
+        return { texto: "No pude detener la ruta." };
+      }
+      if (/busqueda|búsqueda|buscar|resaltado|poligono|polígono/.test(t)) {
+        if (API && API.detenerBusqueda) { API.detenerBusqueda(); return { texto: "Búsqueda detenida. Resaltado eliminado y vista restablecida." }; }
+        return { texto: "No pude detener la búsqueda." };
+      }
+    }
+
     // Ruteo interactivo por voz.
     if (/ruta|trayecto|como llego|cómo llego|como llegar|cómo llegar|calcular ruta|llevame|llévame|llevala|llévala/.test(t)) {
       if (!API) return { texto: "No puedo calcular rutas ahora." };
@@ -560,11 +573,11 @@
     { categoria: "Capas", comandos: ["Activa focos 2020", "Apaga bosques", "Activa susceptibilidad", "Activa agua", "Todas las capas", "Ninguna capa"] },
     { categoria: "Tiempo", comandos: ["Pon el año 2020", "Reproduce la animación"] },
     { categoria: "GPS y foco", comandos: ["Mi ubicación", "Foco más cercano"] },
-    { categoria: "Ruteo", comandos: ["Traza ruta a Yopal", "Ruta a pie al foco más cercano", "Ruta en bicicleta hasta Boyacá"] },
+    { categoria: "Ruteo", comandos: ["Traza ruta a Yopal", "Ruta a pie al foco más cercano", "Ruta en bicicleta hasta Boyacá", "Detén la ruta"] },
     { categoria: "Mapa base", comandos: ["Vista satelital", "Mapa de calles"] },
     { categoria: "Centro de estudio", comandos: ["Abre el centro de estudio", "Cierra el centro de estudio"] },
     { categoria: "Exportar", comandos: ["Realiza informe", "Exporta mapa JPG"] },
-    { categoria: "Búsqueda", comandos: ["Busca Yopal", "Busca el departamento de Boyacá"] },
+    { categoria: "Búsqueda", comandos: ["Busca Yopal", "Busca el departamento de Boyacá", "Detén la búsqueda"] },
     { categoria: "Ayuda", comandos: ["Historial", "Ayuda"] },
   ];
 

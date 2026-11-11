@@ -2267,6 +2267,7 @@
       els.resultCount.textContent = "0";
       els.searchMeta.textContent = "Escribe o elige una categoría";
       refreshQuickQr();
+      actualizarOverlayBusqueda();
       return { total: 0, limited: 0 };
     }
 
@@ -2306,6 +2307,7 @@
     if (opts.fit) fitSearchMarkers();
     scheduleStudyRefresh();
     refreshQuickQr();
+    actualizarOverlayBusqueda();
     return { total: total, limited: limited.length };
   }
 
@@ -5356,6 +5358,8 @@
     routeGroup.clearLayers();
     if (els.routeResult) els.routeResult.textContent = "Selecciona origen y destino, o usa tu ubicación.";
     if (els.routeSteps) els.routeSteps.innerHTML = "";
+    if (els.routeSetOrigin) els.routeSetOrigin.textContent = "📍 Origen: clic en el mapa";
+    if (els.routeSetDest) els.routeSetDest.textContent = "🏁 Destino: clic en el mapa";
   }
 
   function routeDibujarPunto(latlng, color) {
@@ -5516,8 +5520,15 @@
   // ==========================================================================
   function detenerBusqueda() {
     highlightGroup.clearLayers();
+    // Limpiar también la búsqueda activa del panel lateral (si la hay).
+    state.query = "";
+    state.category = "todas";
+    if (els.searchInput) els.searchInput.value = "";
+    if (els.searchClear) els.searchClear.classList.remove("visible");
+    updateCategoryChips();
+    runSearch({ silent: true });
     if (map) map.fitBounds(BOUNDS, { padding: [26, 26], animate: true, duration: 0.9 });
-    Toast.info("Búsqueda detenida", "Resaltado eliminado y vista restablecida.", "stopSearch");
+    Toast.info("Búsqueda detenida", "Resaltado y búsqueda eliminados; vista restablecida.", "stopSearch");
   }
 
   function detenerRutaCompleta() {
@@ -5526,14 +5537,13 @@
     if (els.routePanel) els.routePanel.classList.add("hidden");
     if (els.btnRoute) els.btnRoute.classList.remove("active");
     if (map) map.off("click", routeOnMapClick);
-    if (els.routeSetOrigin) els.routeSetOrigin.textContent = "📍 Origen: clic en el mapa";
-    if (els.routeSetDest) els.routeSetDest.textContent = "🏁 Destino: clic en el mapa";
     Toast.info("Ruta detenida", "Trayecto y marcadores eliminados.", "stopRoute");
   }
 
   function actualizarOverlayBusqueda() {
     if (!els.btnStopSearch) return;
-    const hay = highlightGroup && highlightGroup.getLayers().length > 0;
+    const hay = (highlightGroup && highlightGroup.getLayers().length > 0) ||
+      (lastResults && lastResults.length > 0);
     els.btnStopSearch.classList.toggle("hidden", !hay);
   }
 
@@ -5895,6 +5905,8 @@
     setEnso: apiSetEnso,
     buscar: apiBuscar,
     searchTerritory: apiBuscarTerritorio,
+    detenerBusqueda: function () { detenerBusqueda(); },
+    detenerRuta: function () { detenerRutaCompleta(); },
     exportarInforme: function () { exportReportPdf(); },
     descargarMapa: function () { downloadIgacPng(); },
     descargarMapaPdf: function () { exportMapPdf(); },

@@ -4881,6 +4881,15 @@ input[type="range"]::-moz-range-thumb {
     overflow-y: auto;
   }
 
+  /* Avisos superiores centrados: por debajo de la barra de 2 filas. */
+  .year-banner {
+    top: 96px;
+  }
+
+  .offline-bar {
+    top: 96px;
+  }
+
   .flami-btn {
     right: 10px;
     width: 42px;

@@ -482,7 +482,7 @@
         if (dest && API.rutaDesdeGps) {
           var r = API.rutaDesdeGps({ lat: dest.lat, lon: dest.lon });
           if (!r) brillarBotonUbicacion();
-          return { texto: r ? "Calculando la ruta hasta " + dest.nombre + "." : "Activa tu ubicación del visor para calcular la ruta desde donde estás." };
+          return { texto: r ? "Calculando la ruta hasta " + dest.nombre + "." : "Por favor, activa la ubicación del visor (en la barra superior de la página web) para poder calcular la ruta desde donde estás." };
         }
       }
       return { texto: "Abre el panel de ruta y elige origen y destino, o dime 'ruta al foco más cercano'." };

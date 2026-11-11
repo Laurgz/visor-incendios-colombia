@@ -354,16 +354,16 @@
       return { texto: "Abriendo el centro de estudio." };
     }
 
-    // El Niño
-    if (/el niño|el nino|fenomeno del niño|niño severo|nino severo|niño moderado/.test(t)) {
+    // El Niño — apagar/desactivar primero, para que "apaga el niño" no active.
+    if (/desactiva el niño|apaga el niño|apaga el nino|desactiva el nino|sin niño|sin el niño|sin el nino|quita el niño|quita el nino|apaga enso|desactiva enso/.test(t)) {
+      if (API) API.setEnso(false, "neutro");
+      return { texto: "Contexto de El Niño desactivado." };
+    }
+    if (/el niño|el nino|fenomeno del niño|fenómeno del niño|niño severo|nino severo|niño moderado|nino moderado|activa enso/.test(t)) {
       if (!API) return { texto: "No puedo ajustar El Niño ahora mismo." };
       if (/severo/.test(t)) { API.setEnso(true, "severo"); return { texto: "El Niño severo activado. Aumenté la susceptibilidad a incendios." }; }
       if (/moderado/.test(t)) { API.setEnso(true, "moderado"); return { texto: "El Niño moderado activado." }; }
       API.setEnso(true, "moderado"); return { texto: "Contexto de El Niño activado." };
-    }
-    if (/desactiva el niño|apaga el niño|sin niño|desactiva el nino|apaga el nino/.test(t)) {
-      if (API) API.setEnso(false, "neutro");
-      return { texto: "Contexto de El Niño desactivado." };
     }
 
     // Temperatura superficial (LST): activar/desactivar la capa (ya tiene datos).
@@ -569,7 +569,7 @@
     { categoria: "Saludos", comandos: ["Hola Flami", "¿Cómo estás?", "¿Quién eres?", "Gracias"] },
     { categoria: "Despedida", comandos: ["Adiós Flami", "Chao Flami"] },
     { categoria: "Reporte", comandos: ["Dame el reporte de hoy", "Haz un resumen de incendios"] },
-    { categoria: "El Niño y clima", comandos: ["Activa El Niño severo", "Desactiva El Niño", "Enciende temperatura"] },
+    { categoria: "El Niño y clima", comandos: ["Activa El Niño severo", "Apaga El Niño", "Desactiva El Niño", "Enciende temperatura"] },
     { categoria: "Capas", comandos: ["Activa focos 2020", "Apaga bosques", "Activa susceptibilidad", "Activa agua", "Todas las capas", "Ninguna capa"] },
     { categoria: "Tiempo", comandos: ["Pon el año 2020", "Reproduce la animación"] },
     { categoria: "GPS y foco", comandos: ["Mi ubicación", "Foco más cercano"] },

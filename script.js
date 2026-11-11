@@ -5188,26 +5188,6 @@
     }
   }
 
-  function initEnso() {
-    const toggle = document.getElementById("ensoToggle");
-    const sel = document.getElementById("ensoIntensity");
-    const pill = document.getElementById("ensoPill");
-    function aplicar() {
-      ensoActivo = toggle ? toggle.checked : false;
-      ensoIntensidad = sel ? sel.value : "neutro";
-      if (pill) {
-        pill.textContent = ensoActivo
-          ? (ensoIntensidad.charAt(0).toUpperCase() + ensoIntensidad.slice(1))
-          : "Desactivado";
-      }
-      if (capaActiva("susceptibilidad")) renderCloropleta();
-      if (deptoSeleccionado) actualizarInfoDepto();
-    }
-    if (toggle) toggle.addEventListener("change", aplicar);
-    if (sel) sel.addEventListener("change", aplicar);
-    aplicar();
-  }
-
   // Herramienta de medición geométrica: distancia (km) y área (km² / ha).
   const measureState = { active: false, mode: "distancia", points: [] };
   let measurePolyline = null;
@@ -5565,7 +5545,6 @@
     initFirms();
     initDepartamentos();
     initRiesgo();
-    initEnso();
     initMeasure();
     initRouting();
     setYear(state.year, { silent: true, toastIt: false });
@@ -5665,16 +5644,10 @@
   function apiSetEnso(activo, intensidad) {
     ensoActivo = !!activo;
     if (intensidad) ensoIntensidad = intensidad;
-    const toggle = document.getElementById("ensoToggle");
-    const sel = document.getElementById("ensoIntensity");
-    const pill = document.getElementById("ensoPill");
     const selLayer = document.getElementById("ensoLayerIntensity");
     const ensoCb = document.querySelector('#layerList input[data-layer="enso"]');
-    if (toggle) toggle.checked = ensoActivo;
-    if (sel && intensidad) sel.value = intensidad;
     if (selLayer) selLayer.value = ensoIntensidad;
     if (ensoCb) ensoCb.checked = ensoActivo;
-    if (pill) pill.textContent = ensoActivo ? (ensoIntensidad.charAt(0).toUpperCase() + ensoIntensidad.slice(1)) : "Desactivado";
     // Mostrar/ocultar el ráster de sequía (CHIRPS) según El Niño.
     if (groups.sequia && map) {
       if (ensoActivo) {

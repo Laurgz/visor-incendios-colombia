@@ -78,9 +78,10 @@
       '<div class="flami-bubble" id="flamiBubble"><span id="flamiBubbleText">¡Hola! Soy Flami</span></div>' +
       '<div class="flami-avatar">' + FLAMI_SVG + '</div>' +
       '<div class="flami-input-row">' +
-        '<input id="flamiInput" type="text" placeholder="Escribe un comando…" autocomplete="off" aria-label="Escribir comando para Flami">' +
+        '<input id="flamiInput" type="text" placeholder="Ej: activa focos 2020" autocomplete="off" aria-label="Escribir comando para Flami">' +
         '<button id="flamiSend" type="button" aria-label="Enviar comando">➤</button>' +
       '</div>' +
+      '<div class="flami-example" id="flamiExample">Di: «activa focos 2020»</div>' +
       '<div class="flami-status" id="flamiStatus"><span class="flami-dot"></span><span id="flamiStatusText">en espera</span></div>';
     document.body.appendChild(personaje);
 
@@ -601,9 +602,48 @@
     });
   }
 
+  // Ejemplos rotativos que se muestran en la barra de Flami.
+  var EJEMPLOS_ROTACION = [
+    "activa focos 2020",
+    "apaga bosques",
+    "¿cómo estás?",
+    "dame el reporte de hoy",
+    "realiza informe",
+    "busca Yopal",
+    "traza ruta a Yopal",
+    "pon el año 2015",
+    "enciende temperatura",
+    "activa El Niño severo",
+    "foco más cercano",
+    "mi ubicación",
+    "vista satelital",
+    "adiós Flami",
+  ];
+
+  function initEjemplo() {
+    var node = el.personaje.querySelector("#flamiExample");
+    if (!node) return;
+    var idx = 0;
+    function pintar() {
+      node.innerHTML = '<span class="flami-example-label">Di:</span> «' + esc(EJEMPLOS_ROTACION[idx]) + "»";
+    }
+    pintar();
+    var timer = setInterval(function () {
+      idx = (idx + 1) % EJEMPLOS_ROTACION.length;
+      pintar();
+    }, 4200);
+    // Clic: ejecutar el comando mostrado.
+    node.addEventListener("click", function () {
+      procesar(EJEMPLOS_ROTACION[idx]);
+    });
+    // Evitar fuga del timer (por si se re-inicia el módulo).
+    node._flamiExampleTimer = timer;
+  }
+
   function init() {
     el = crearDOM();
     renderGuia();
+    initEjemplo();
     el.btn.addEventListener("click", function () {
       if (activo) desactivar();
       else activar();

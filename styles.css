@@ -3565,6 +3565,10 @@ input[type="range"]::-moz-range-thumb {
   justify-content: center;
 }
 
+.geo-actions .btn.hidden {
+  display: none;
+}
+
 /* Etiquetas y distancias en el mapa -------------------------------------- */
 .dist-label {
   background: transparent;

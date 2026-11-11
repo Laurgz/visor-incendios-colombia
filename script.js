@@ -290,6 +290,7 @@
     geoQuemadaDist: $("#geoQuemadaDist"),
     geoCenter: $("#geoCenter"),
     geoStop: $("#geoStop"),
+    geoActivate: $("#geoActivate"),
     firmsPill: $("#firmsPill"),
     firmsKey: $("#firmsKey"),
     firmsSource: $("#firmsSource"),
@@ -1316,6 +1317,7 @@
     els.btnGeo.classList.add("active");
     els.geoPanel.classList.remove("hidden", "error");
     els.geoState.textContent = "Ubicación en vivo";
+    actualizarBotonesGeo();
     actualizarProximidad();
     if (first) {
       map.setView([state.geo.lat, state.geo.lon], Math.max(map.getZoom(), 12), {
@@ -1338,6 +1340,7 @@
     els.geoPanel.classList.remove("hidden");
     els.geoPanel.classList.add("error");
     els.geoState.textContent = "Sin ubicación";
+    actualizarBotonesGeo();
     els.geoCoords.textContent = msg;
     els.geoAcc.textContent = "—";
     els.geoTime.textContent = "—";
@@ -1359,6 +1362,7 @@
     els.geoPanel.classList.remove("hidden", "error");
     els.geoState.textContent = "Localizando…";
     els.geoCoords.textContent = "Buscando señal GPS…";
+    actualizarBotonesGeo();
     try {
       geoWatchId = navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, GEO_OPTS);
       Toast.info(
@@ -1391,6 +1395,7 @@
     els.geoPanel.classList.add("hidden");
     els.geoPanel.classList.remove("error");
     els.geoState.textContent = "Mi ubicación";
+    actualizarBotonesGeo();
     actualizarProximidad();
     updateLegend();
     if (!silent) {
@@ -1406,6 +1411,13 @@
     });
   }
 
+  function actualizarBotonesGeo() {
+    const activo = !!state.geoActive;
+    if (els.geoActivate) els.geoActivate.classList.toggle("hidden", activo);
+    if (els.geoCenter) els.geoCenter.classList.toggle("hidden", !activo);
+    if (els.geoStop) els.geoStop.classList.toggle("hidden", !activo);
+  }
+
   function initGeo() {
     if (!els.btnGeo) return;
     els.btnGeo.addEventListener("click", () => {
@@ -1413,17 +1425,16 @@
       if (abierto) {
         // Cerrar la pestaña sin detener el GPS (sigue activo en segundo plano).
         els.geoPanel.classList.add("hidden");
-      } else if (state.geoActive) {
-        // Reabrir la pestaña mostrando la ubicación que ya se sigue.
-        els.geoPanel.classList.remove("hidden", "error");
-        centrarEnGeo();
       } else {
-        startGeo();
+        // Solo abrir la pestaña: el GPS NO se activa automáticamente.
+        els.geoPanel.classList.remove("hidden", "error");
+        actualizarBotonesGeo();
       }
     });
     els.geoClose.addEventListener("click", () => {
       els.geoPanel.classList.add("hidden");
     });
+    if (els.geoActivate) els.geoActivate.addEventListener("click", () => startGeo());
     els.geoCenter.addEventListener("click", centrarEnGeo);
     els.geoStop.addEventListener("click", () => stopGeo(false));
     els.geoNearestFoco.addEventListener("click", () => {
@@ -1448,6 +1459,7 @@
         "geoQuemada"
       );
     });
+    actualizarBotonesGeo();
   }
 
   /* --------------------------- NASA FIRMS en vivo ----------------------- */

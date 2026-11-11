@@ -208,6 +208,29 @@
     if (b) b.textContent = texto;
   }
 
+  // Hace brillar el botón de ubicación (btnGeo) para señalar al usuario.
+  function brillarBotonUbicacion() {
+    var btn = document.getElementById("btnGeo");
+    if (!btn) return;
+    btn.classList.add("glow");
+    // Refuerzo de color con prioridad máxima (inline + important) para que
+    // el brillo se vea sí o sí, independientemente de la cascada CSS.
+    try {
+      btn.style.setProperty("border-color", "rgba(96, 165, 250, 0.95)", "important");
+      btn.style.setProperty("background", "rgba(37, 99, 235, 0.28)", "important");
+      btn.style.setProperty("color", "#dbeafe", "important");
+    } catch (e) {}
+    if (btn._glowTimer) clearTimeout(btn._glowTimer);
+    btn._glowTimer = setTimeout(function () {
+      btn.classList.remove("glow");
+      try {
+        btn.style.removeProperty("border-color");
+        btn.style.removeProperty("background");
+        btn.style.removeProperty("color");
+      } catch (e) {}
+    }, 4200);
+  }
+
   // --------------------------------------------------------------- activar
   function activar() {
     if (!el) return;
@@ -448,7 +471,8 @@
       // Foco más cercano.
       if (/foco mas cercano|foco más cercano|incendio mas cercano|incendio más cercano/.test(t)) {
         var ok = API.rutaAlFocoCercano();
-        return { texto: ok ? "Calculando la ruta al foco más cercano." : "No pude calcular la ruta. Activa tu ubicación." };
+        if (!ok) brillarBotonUbicacion();
+        return { texto: ok ? "Calculando la ruta al foco más cercano." : "No pude calcular la ruta. Activa tu ubicación del visor." };
       }
 
       // Destino específico (departamento/municipio/coordenadas).
@@ -457,7 +481,8 @@
         var dest = API.obtenerCoordenadas(objetivo);
         if (dest && API.rutaDesdeGps) {
           var r = API.rutaDesdeGps({ lat: dest.lat, lon: dest.lon });
-          return { texto: r ? "Calculando la ruta hasta " + dest.nombre + "." : "Activa tu ubicación GPS para calcular la ruta desde donde estás." };
+          if (!r) brillarBotonUbicacion();
+          return { texto: r ? "Calculando la ruta hasta " + dest.nombre + "." : "Activa tu ubicación del visor para calcular la ruta desde donde estás." };
         }
       }
       return { texto: "Abre el panel de ruta y elige origen y destino, o dime 'ruta al foco más cercano'." };

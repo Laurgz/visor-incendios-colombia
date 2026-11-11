@@ -1079,6 +1079,20 @@ input[type="range"]::-moz-range-thumb {
   background: rgba(30, 45, 70, 0.9);
 }
 
+/* Brillo pulsante del botón de ubicación cuando Flami lo señala. */
+.icon-btn.glow {
+  animation: geo-glow 1.15s ease-in-out infinite !important;
+  border-color: rgba(96, 165, 250, 0.95) !important;
+  color: #dbeafe !important;
+  background: rgba(37, 99, 235, 0.28) !important;
+  transition: none !important;
+}
+
+@keyframes geo-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.85), 0 0 12px 3px rgba(59, 130, 246, 0.7); }
+  50% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0), 0 0 26px 7px rgba(59, 130, 246, 0.95); }
+}
+
 /* Map -------------------------------------------------------------------- */
 .map-wrap {
   position: relative;

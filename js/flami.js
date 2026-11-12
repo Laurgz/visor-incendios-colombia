@@ -91,7 +91,7 @@
   var el = null;
 
   // ------------------------------------------------------------- voz (TTS)
-  function hablar(texto) {
+  function hablar(texto, alTerminar) {
     if (!window.speechSynthesis) { return; }
     // Half-duplex: bloquear el micrófono mientras Flami habla.
     detenerMic();
@@ -109,10 +109,17 @@
     u.onstart = function () { setEstado("hablando"); };
     u.onend = function () {
       hablando = false;
+      if (alTerminar) { alTerminar(); return; }
       if (activo) { setEstado("escuchando"); reiniciarEscucha(); }
       else { setEstado("en espera"); }
     };
     window.speechSynthesis.speak(u);
+  }
+
+  // Responde siempre: globo de texto + síntesis de audio.
+  function responder(texto) {
+    mostrarBurbuja(texto);
+    hablar(texto);
   }
 
   function detenerMic() {
@@ -156,8 +163,14 @@
     };
     recognition.onerror = function (e) {
       escuchando = false;
-      if ((e.error === "not-allowed" || e.error === "service-not-allowed") && el) {
-        mostrarBurbuja("Activa el permiso del micrófono o escribe tus comandos abajo.");
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        if (el) mostrarBurbuja("Activa el permiso del micrófono o escribe tus comandos abajo.");
+        return;
+      }
+      if (e.error === "no-speech" || e.error === "no-match") {
+        // Fallback obligatorio: Flami responde en texto y audio.
+        if (activo) responder("Repítelo de nuevo, por favor, o pide ayuda.");
+        return;
       }
     };
     recognition.onend = function () {
@@ -279,13 +292,13 @@
       if (r && r.texto) respuestas.push(r.texto);
       if (/^(adios|adiós|chao|chau|hasta luego|hasta pronto|hasta manana|hasta mañana|nos vemos|me voy|me retiro|bye|hasta la proxima|hasta la próxima|buenas noches)\b/.test(normalizar(partes[i]))) despedida = true;
     }
-    var textoFinal = respuestas.length ? respuestas.join(" ") : "No te entendí. Pide 'ayuda'.";
+    var textoFinal = respuestas.length ? respuestas.join(" ") : "Repítelo de nuevo, por favor, o pide ayuda.";
     mostrarBurbuja(textoFinal);
-    hablar(textoFinal);
     if (despedida) {
-      // Dejar que Flami termine de despedirse y luego ocultarse.
-      setTimeout(function () { desactivar(); }, 3200);
+      // Primero locutar la despedida y, únicamente al terminar (onend), ocultar.
+      hablar(textoFinal, function () { desactivar(); });
     } else {
+      hablar(textoFinal);
       resetIdle();
     }
   }
@@ -538,7 +551,7 @@
       return { texto: "El histórico oficial de focos cubre de 2012 a 2026. Extenderlo al año 2000 requiere reprocesar los datos satelitales." };
     }
 
-    return { texto: "No te entendí bien. Prueba con 'activa focos', 'pon el año 2020' o pide 'ayuda'." };
+    return { texto: "Repítelo de nuevo, por favor, o pide ayuda." };
   }
 
   var CAPA_ALIASES = {
@@ -587,6 +600,19 @@
       escuchando = false;
       // No marcar pasivoIniciado: se reintentará con el primer gesto del usuario.
     }
+  }
+
+  // Desbloquea la síntesis de voz en navegadores móviles (iOS/Safari) que
+  // bloquean el audio automático; se ejecuta con el primer toque/gesto.
+  function desbloquearAudio() {
+    if (!window.speechSynthesis) return;
+    try {
+      window.speechSynthesis.getVoices();
+      var u = new SpeechSynthesisUtterance(" ");
+      u.volume = 0;
+      u.rate = 1;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
   }
 
   // ------------------------------------------------------------------ guía
@@ -714,6 +740,12 @@
     iniciarPasivo();
     document.addEventListener("click", iniciarPasivo, { passive: true });
     document.addEventListener("keydown", iniciarPasivo, { passive: true });
+    document.addEventListener("touchstart", iniciarPasivo, { passive: true });
+    document.addEventListener("pointerdown", iniciarPasivo, { passive: true });
+    // Desbloquear el audio en móvil con el primer gesto, sin reiniciar la app.
+    ["touchstart", "pointerdown", "click", "keydown"].forEach(function (ev) {
+      document.addEventListener(ev, desbloquearAudio, { passive: true, once: true });
+    });
   }
 
   if (document.readyState === "loading") {

@@ -3681,6 +3681,8 @@
     if (capaActiva("bosques")) tareas.push(cargarRaster("bosque"));
     if (capaActiva("agua")) tareas.push(cargarRaster("agua"));
     if (capaActiva("susceptibilidad")) tareas.push(cargarRaster("susceptibilidad"));
+    if (capaActiva("lst")) tareas.push(cargarRaster("lst"));
+    if (ensoActivo || capaActiva("enso")) tareas.push(cargarRaster("sequia"));
     await Promise.all(tareas);
   }
 
@@ -4150,6 +4152,8 @@
     }
     if (capaActiva("bosques")) dibujarRasterActivo("bosque", 0.62);
     if (capaActiva("agua")) dibujarRasterActivo("agua", 0.78);
+    if (capaActiva("lst")) dibujarRasterActivo("lst", 0.7);
+    if (ensoActivo || capaActiva("enso")) dibujarRasterActivo("sequia", ensoIntensidad === "severo" ? 0.75 : 0.55);
     if (capaActiva("susceptibilidad") && D.departamentos) {
       const riesgoIgac = calcularRiesgoDeptos();
       (D.departamentos.features || []).forEach(function (f) {
@@ -5766,6 +5770,7 @@
 
   function apiSetEnso(activo, intensidad) {
     ensoActivo = !!activo;
+    state.layers["enso"] = !!activo;
     if (intensidad) ensoIntensidad = intensidad;
     const selLayer = document.getElementById("ensoLayerIntensity");
     const ensoCb = document.querySelector('#layerList input[data-layer="enso"]');

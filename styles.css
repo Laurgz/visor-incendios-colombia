@@ -4930,3 +4930,51 @@ input[type="range"]::-moz-range-thumb {
     overflow-y: auto;
   }
 }
+
+/* ==========================================================================
+   Móvil: legibilidad y objetivos táctiles (botones y texto del panel GPS)
+   ========================================================================== */
+@media (max-width: 620px) {
+  /* Iconos de la barra superior: más grandes para el dedo. */
+  .map-actions .icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Botones del panel "Ubicación en vivo": tamaño táctil y legible. */
+  .geo-actions .btn {
+    padding: 12px 14px;
+    font-size: 12px;
+    min-height: 44px;
+  }
+
+  /* Texto del panel de ubicación: más legible en móvil. */
+  .geo-head strong {
+    font-size: 12.5px;
+  }
+
+  .geo-coords {
+    font-size: 11px;
+  }
+
+  .geo-metrics b {
+    font-size: 12px;
+  }
+
+  .geo-metrics small,
+  .geo-near-text small {
+    font-size: 8.5px;
+  }
+
+  .geo-near-text b {
+    font-size: 10px;
+  }
+
+  .geo-near-dist {
+    font-size: 11px;
+  }
+
+  .geo-near-row {
+    padding: 9px 9px;
+  }
+}

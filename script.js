@@ -1288,7 +1288,6 @@
 
   function onGeoSuccess(pos) {
     const c = pos.coords;
-    const first = !state.geo;
     state.geo = {
       lat: c.latitude,
       lon: c.longitude,
@@ -1315,16 +1314,10 @@
         .setRadius(Math.max(30, state.geo.accuracy));
     }
     els.btnGeo.classList.add("active");
-    els.geoPanel.classList.remove("hidden", "error");
+    els.geoPanel.classList.remove("error");
     els.geoState.textContent = "Ubicación en vivo";
     actualizarBotonesGeo();
     actualizarProximidad();
-    if (first) {
-      map.setView([state.geo.lat, state.geo.lon], Math.max(map.getZoom(), 12), {
-        animate: true,
-        duration: 0.8,
-      });
-    }
     updateLegend();
   }
 
@@ -1337,14 +1330,12 @@
       geoWatchId = null;
     }
     els.btnGeo.classList.remove("active");
-    els.geoPanel.classList.remove("hidden");
     els.geoPanel.classList.add("error");
     els.geoState.textContent = "Sin ubicación";
-    actualizarBotonesGeo();
     els.geoCoords.textContent = msg;
     els.geoAcc.textContent = "—";
     els.geoTime.textContent = "—";
-    Toast.error("Geolocalización", msg, "geoError");
+    actualizarBotonesGeo();
   }
 
   function startGeo() {
@@ -1353,23 +1344,16 @@
       return;
     }
     if (state.geoActive && geoWatchId != null) {
-      els.geoPanel.classList.remove("hidden");
-      centrarEnGeo();
       return;
     }
     state.geoActive = true;
     els.btnGeo.classList.add("active");
-    els.geoPanel.classList.remove("hidden", "error");
+    els.geoPanel.classList.remove("error");
     els.geoState.textContent = "Localizando…";
     els.geoCoords.textContent = "Buscando señal GPS…";
     actualizarBotonesGeo();
     try {
       geoWatchId = navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, GEO_OPTS);
-      Toast.info(
-        "GPS activado",
-        "Siguiendo tu ubicación y calculando distancias en tiempo real.",
-        "geo"
-      );
     } catch (err) {
       onGeoError({ code: 2 });
     }
@@ -1392,15 +1376,14 @@
     }
     proximityGroup.clearLayers();
     els.btnGeo.classList.remove("active");
-    els.geoPanel.classList.add("hidden");
     els.geoPanel.classList.remove("error");
     els.geoState.textContent = "Mi ubicación";
+    els.geoCoords.textContent = "Buscando señal GPS…";
+    els.geoAcc.textContent = "—";
+    els.geoTime.textContent = "—";
     actualizarBotonesGeo();
     actualizarProximidad();
     updateLegend();
-    if (!silent) {
-      Toast.info("GPS desactivado", "La ubicación dejó de seguirse.", "geoOff");
-    }
   }
 
   function centrarEnGeo() {
@@ -1420,7 +1403,7 @@
 
   // Abre/despliega el panel "Ubicación en vivo" SIN iniciar el rastreo GPS.
   function abrirPanelGeo() {
-    if (els.geoPanel) els.geoPanel.classList.remove("hidden", "error");
+    if (els.geoPanel) els.geoPanel.classList.remove("hidden");
     actualizarBotonesGeo();
   }
 

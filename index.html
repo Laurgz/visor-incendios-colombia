@@ -424,18 +424,20 @@
           <button type="button" id="routeClose" aria-label="Cerrar ruta">×</button>
         </header>
         <div class="route-fields">
-          <button type="button" class="btn ghost small" id="routeSetOrigin">📍 Origen: clic en el mapa</button>
-          <button type="button" class="btn ghost small" id="routeSetDest">🏁 Destino: clic en el mapa</button>
-          <button type="button" class="btn ghost small" id="routeUseGps">📡 Usar mi ubicación</button>
-          <label class="select-wrap">Modo
-            <select id="routeProfile">
-              <option value="driving" selected>Conducción</option>
-              <option value="foot">A pie</option>
-              <option value="bike">Bicicleta</option>
-            </select>
+          <label class="route-field-label">Origen
+            <span class="route-autocomplete">
+              <input id="routeOrigin" type="text" placeholder="Departamento, municipio o lugar…" autocomplete="off" spellcheck="false">
+              <span class="route-suggest hidden" id="routeOriginSuggest"></span>
+            </span>
+          </label>
+          <label class="route-field-label">Destino
+            <span class="route-autocomplete">
+              <input id="routeDest" type="text" placeholder="Departamento, municipio o lugar…" autocomplete="off" spellcheck="false">
+              <span class="route-suggest hidden" id="routeDestSuggest"></span>
+            </span>
           </label>
         </div>
-        <div class="route-result" id="routeResult">Selecciona origen y destino, o usa tu ubicación.</div>
+        <div class="route-result" id="routeResult">Escribe el origen y el destino para calcular la ruta en vehículo.</div>
         <div class="route-steps" id="routeSteps"></div>
         <div class="measure-actions">
           <button type="button" class="btn ghost small" id="routeClear">Limpiar</button>

@@ -264,13 +264,13 @@
     btnRoute: $("#btnRoute"),
     routePanel: $("#routePanel"),
     routeClose: $("#routeClose"),
-    routeSetOrigin: $("#routeSetOrigin"),
-    routeSetDest: $("#routeSetDest"),
-    routeUseGps: $("#routeUseGps"),
+    routeOrigin: $("#routeOrigin"),
+    routeDest: $("#routeDest"),
+    routeOriginSuggest: $("#routeOriginSuggest"),
+    routeDestSuggest: $("#routeDestSuggest"),
     routeResult: $("#routeResult"),
     routeSteps: $("#routeSteps"),
     routeClear: $("#routeClear"),
-    routeProfile: $("#routeProfile"),
     btnStopSearch: $("#btnStopSearch"),
     btnStopRoute: $("#btnStopRoute"),
     btnReset: $("#btnReset"),
@@ -5363,46 +5363,66 @@
   // ==========================================================================
   // Ruteo interactivo (OSRM): cálculo y trazado de rutas sobre el mapa.
   // ==========================================================================
-  const routeState = { activo: false, origen: null, destino: null, esperando: null };
+  const routeState = { activo: false, origen: null, destino: null };
 
   function routeLimpiar() {
     routeState.origen = null;
     routeState.destino = null;
-    routeState.esperando = null;
     routeGroup.clearLayers();
-    if (els.routeResult) els.routeResult.textContent = "Selecciona origen y destino, o usa tu ubicación.";
+    if (els.routeOrigin) els.routeOrigin.value = "";
+    if (els.routeDest) els.routeDest.value = "";
+    if (els.routeOriginSuggest) els.routeOriginSuggest.classList.add("hidden");
+    if (els.routeDestSuggest) els.routeDestSuggest.classList.add("hidden");
+    if (els.routeResult) els.routeResult.textContent = "Escribe el origen y el destino para calcular la ruta en vehículo.";
     if (els.routeSteps) els.routeSteps.innerHTML = "";
-    if (els.routeSetOrigin) els.routeSetOrigin.textContent = "📍 Origen: clic en el mapa";
-    if (els.routeSetDest) els.routeSetDest.textContent = "🏁 Destino: clic en el mapa";
   }
 
   function routeDibujarPunto(latlng, color) {
     return L.circleMarker(latlng, { radius: 7, color: "#fff", weight: 2, fillColor: color, fillOpacity: 1 }).addTo(routeGroup);
   }
 
-  function routeOnMapClick(e) {
-    if (!routeState.esperando) return;
-    var pt = { lat: e.latlng.lat, lon: e.latlng.lng };
-    if (routeState.esperando === "origen") {
-      routeState.origen = pt;
-      routeDibujarPunto([pt.lat, pt.lon], "#22c55e");
-      if (els.routeSetOrigin) els.routeSetOrigin.textContent = "📍 Origen: " + pt.lat.toFixed(3) + ", " + pt.lon.toFixed(3);
-    } else if (routeState.esperando === "destino") {
-      routeState.destino = pt;
-      routeDibujarPunto([pt.lat, pt.lon], "#ef4444");
-      if (els.routeSetDest) els.routeSetDest.textContent = "🏁 Destino: " + pt.lat.toFixed(3) + ", " + pt.lon.toFixed(3);
-    }
-    routeState.esperando = null;
-    if (routeState.origen && routeState.destino) {
-      calcularRuta(routeState.origen, routeState.destino);
-    }
-  }
-
   const RUTA_VELOCIDAD = { driving: 60, foot: 5, bike: 15 };
   const RUTA_NOMBRES = { driving: "Conducción", foot: "A pie", bike: "Bicicleta" };
 
   function perfilRuta() {
-    return els.routeProfile ? els.routeProfile.value : "driving";
+    return "driving";
+  }
+
+  // Autocompletado de los campos Origen/Destino con coincidencia flexible.
+  function configurarAutocomplete(inputEl, suggestEl, onSelect) {
+    if (!inputEl || !suggestEl) return;
+    var timer = null;
+    inputEl.addEventListener("input", function () {
+      clearTimeout(timer);
+      var texto = inputEl.value.trim();
+      if (texto.length < 2) { suggestEl.classList.add("hidden"); return; }
+      timer = setTimeout(function () {
+        var lugares = buscarLugares(texto, 8);
+        if (!lugares.length) {
+          suggestEl.innerHTML = '<div class="route-suggest-item empty">Sin coincidencias</div>';
+        } else {
+          suggestEl.innerHTML = lugares.map(function (l) {
+            var label = l.tipo === "Departamento" ? l.nombre : (l.nombre + (l.depto ? " · " + l.depto : ""));
+            return '<button type="button" class="route-suggest-item" data-lat="' + l.lat + '" data-lon="' + l.lon + '" data-nombre="' + esc(label) + '">' +
+              esc(label) + '<small>' + esc(l.tipo) + "</small></button>";
+          }).join("");
+        }
+        suggestEl.classList.remove("hidden");
+      }, 180);
+    });
+    suggestEl.addEventListener("click", function (e) {
+      var item = e.target.closest(".route-suggest-item");
+      if (!item || item.classList.contains("empty")) return;
+      var lat = parseFloat(item.getAttribute("data-lat"));
+      var lon = parseFloat(item.getAttribute("data-lon"));
+      var nombre = item.getAttribute("data-nombre");
+      inputEl.value = nombre;
+      suggestEl.classList.add("hidden");
+      if (onSelect) onSelect({ lat: lat, lon: lon, nombre: nombre });
+    });
+    document.addEventListener("click", function (e) {
+      if (e.target !== inputEl && !suggestEl.contains(e.target)) suggestEl.classList.add("hidden");
+    });
   }
 
   // Modo offline: línea recta geodésica con tiempo estimado según el perfil.
@@ -5418,7 +5438,7 @@
     }).addTo(routeGroup);
     map.fitBounds(L.latLngBounds([[origen.lat, origen.lon], [destino.lat, destino.lon]]), { padding: [40, 40] });
     if (els.routeResult) {
-      els.routeResult.textContent = "Sin conexión · línea recta: " + km.toFixed(1) + " km · ~" + min + " min (" + (RUTA_NOMBRES[perfil] || "—") + ")";
+      els.routeResult.textContent = "Conduciendo en vehículo · línea recta: " + km.toFixed(1) + " km · ~" + min + " min";
     }
     if (els.routeSteps) {
       els.routeSteps.innerHTML = '<div class="route-step"><span>→</span><span>Modo offline: distancia geodésica aproximada, sin pasos de navegación.</span></div>';
@@ -5427,7 +5447,7 @@
 
   function calcularRuta(origen, destino, perfil) {
     var p = perfil || perfilRuta();
-    if (els.routeResult) els.routeResult.textContent = "Calculando ruta…";
+    if (els.routeResult) els.routeResult.textContent = "Calculando ruta en vehículo…";
     // Sin conexión: fallback directo a línea recta.
     if (navigator.onLine === false) {
       rutaGeodesica(origen, destino, p);
@@ -5451,7 +5471,7 @@
         var km = (ruta.distance / 1000).toFixed(1);
         var min = Math.round(ruta.duration / 60);
         if (els.routeResult) {
-          els.routeResult.textContent = "Distancia: " + km + " km · Tiempo estimado: " + min + " min (" + (RUTA_NOMBRES[p] || "—") + ")";
+          els.routeResult.textContent = "Conduciendo en vehículo · Distancia: " + km + " km · Tiempo estimado: " + min + " min";
         }
         // Pasos de navegación.
         var pasos = [];
@@ -5470,7 +5490,7 @@
           });
         });
         if (els.routeSteps) els.routeSteps.innerHTML = pasos.join("");
-        Toast.success("Ruta calculada", km + " km · " + min + " min estimados", "ruta");
+        Toast.success("Ruta calculada", km + " km · " + min + " min conduciendo en vehículo", "ruta");
       })
       .catch(function (err) {
         console.error("Ruta:", err);
@@ -5492,41 +5512,33 @@
       if (routeState.activo) {
         els.routePanel.classList.remove("hidden");
         els.btnRoute.classList.add("active");
-        map.on("click", routeOnMapClick);
       } else {
         els.routePanel.classList.add("hidden");
         els.btnRoute.classList.remove("active");
-        map.off("click", routeOnMapClick);
       }
     });
     if (els.routeClose) els.routeClose.addEventListener("click", function () {
       routeState.activo = false;
       els.routePanel.classList.add("hidden");
       els.btnRoute.classList.remove("active");
-      map.off("click", routeOnMapClick);
     });
-    if (els.routeSetOrigin) els.routeSetOrigin.addEventListener("click", function () {
-      routeState.esperando = "origen";
-      els.routeSetOrigin.textContent = "📍 Origen: haz clic en el mapa…";
-    });
-    if (els.routeSetDest) els.routeSetDest.addEventListener("click", function () {
-      routeState.esperando = "destino";
-      els.routeSetDest.textContent = "🏁 Destino: haz clic en el mapa…";
-    });
-    if (els.routeUseGps) els.routeUseGps.addEventListener("click", function () {
-      if (state.geo && state.geo.lat != null) {
-        routeState.origen = { lat: state.geo.lat, lon: state.geo.lon };
-        routeDibujarPunto([state.geo.lat, state.geo.lon], "#22c55e");
-        if (els.routeSetOrigin) els.routeSetOrigin.textContent = "📍 Origen: tu ubicación";
-      } else if (window.VisorAPI && window.VisorAPI.abrirUbicacion) {
-        window.VisorAPI.abrirUbicacion();
-        if (els.routeResult) els.routeResult.textContent = "Abre el panel de ubicación y presiona 'Activar ubicación'.";
+
+    function intentarCalcular() {
+      if (routeState.origen && routeState.destino) {
+        calcularRuta(routeState.origen, routeState.destino, "driving");
       }
+    }
+
+    configurarAutocomplete(els.routeOrigin, els.routeOriginSuggest, function (lugar) {
+      routeState.origen = lugar;
+      intentarCalcular();
     });
+    configurarAutocomplete(els.routeDest, els.routeDestSuggest, function (lugar) {
+      routeState.destino = lugar;
+      intentarCalcular();
+    });
+
     if (els.routeClear) els.routeClear.addEventListener("click", routeLimpiar);
-    if (els.routeProfile) els.routeProfile.addEventListener("change", function () {
-      if (routeState.origen && routeState.destino) calcularRuta(routeState.origen, routeState.destino);
-    });
   }
 
   // ==========================================================================
@@ -5550,7 +5562,6 @@
     routeLimpiar();
     if (els.routePanel) els.routePanel.classList.add("hidden");
     if (els.btnRoute) els.btnRoute.classList.remove("active");
-    if (map) map.off("click", routeOnMapClick);
     Toast.info("Ruta detenida", "Trayecto y marcadores eliminados.", "stopRoute");
   }
 
@@ -5781,26 +5792,92 @@
   }
 
   // Buscador territorial universal: coordenadas, departamentos o texto libre.
-  // Resalta la geometría encontrada (stroke/fill temporal) y hace zoom suave.
-  function apiResaltarDepto(nombre) {
-    var feat = ((D.departamentos && D.departamentos.features) || []).find(function (f) {
-      return (f.properties || {}).nombre === nombre;
-    });
-    if (!feat) { enfocarDepto(nombre); return; }
+  // Función central unificada: resalta el polígono de un territorio (departamento
+  // o municipio) con borde y relleno amarillo intenso, zoom suave y estadísticas.
+  function resaltarTerritorio(tipo, nombre, feat) {
+    highlightGroup.clearLayers();
+    if (!feat) {
+      if (tipo === "departamento") { seleccionarDepartamento(nombre); enfocarDepto(nombre); }
+      return;
+    }
     try {
-      highlightGroup.clearLayers();
       var capa = L.geoJSON(sinPuntos(feat), {
-        style: { color: "#ffd166", weight: 3, opacity: 0.95, fillColor: "#ff8a3c", fillOpacity: 0.35 },
+        style: { color: "#facc15", weight: 3.5, opacity: 1, fillColor: "#facc15", fillOpacity: 0.35 },
       });
       capa.addTo(highlightGroup);
       if (!map.hasLayer(highlightGroup)) highlightGroup.addTo(map);
       var b = capa.getBounds();
-      if (b && b.isValid()) map.flyToBounds(b, { padding: [40, 40], duration: 1.4 });
-    } catch (e) { enfocarDepto(nombre); }
+      if (b && b.isValid()) map.flyToBounds(b, { padding: [40, 40], duration: 1.2 });
+      if (tipo === "departamento") seleccionarDepartamento(nombre);
+    } catch (e) {
+      if (tipo === "departamento") { seleccionarDepartamento(nombre); enfocarDepto(nombre); }
+    }
+  }
+
+  function seleccionarDepartamento(nombre) {
+    deptoSeleccionado = nombre;
+    var sel = document.getElementById("deptoSelect");
+    if (sel) sel.value = nombre;
+    actualizarInfoDepto();
+  }
+
+  function apiResaltarDepto(nombre) {
+    var feat = ((D.departamentos && D.departamentos.features) || []).find(function (f) {
+      return (f.properties || {}).nombre === nombre;
+    });
+    resaltarTerritorio("departamento", nombre, feat);
   }
 
   function normalizarTexto(s) {
-    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+  }
+
+  // Distancia de Levenshtein para tolerar errores ortográficos.
+  function levenshtein(a, b) {
+    if (a === b) return 0;
+    var m = a.length, n = b.length;
+    if (!m) return n;
+    if (!n) return m;
+    var d = [];
+    for (var i = 0; i <= m; i++) { d[i] = [i]; }
+    for (var j = 0; j <= n; j++) { d[0][j] = j; }
+    for (var i = 1; i <= m; i++) {
+      for (var j = 1; j <= n; j++) {
+        var cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+      }
+    }
+    return d[m][n];
+  }
+
+  // Coincidencia flexible: normaliza y compara con tolerancia (subcadena o
+  // distancia de Levenshtein proporcional a la longitud).
+  function fuzzyCoincide(texto, nombre) {
+    var t = normalizarTexto(texto);
+    var n = normalizarTexto(nombre);
+    if (!t || !n) return false;
+    if (n === t) return true;
+    if (n.indexOf(t) >= 0 || t.indexOf(n) >= 0) return true;
+    var umbral = Math.max(1, Math.floor(n.length * 0.25));
+    return levenshtein(t, n) <= umbral;
+  }
+
+  // Busca el nombre más cercano (fuzzy) entre una lista de nombres originales.
+  function buscarCoincidencia(texto, nombres) {
+    var t = normalizarTexto(texto);
+    if (!t) return null;
+    var exacto = null, sub = null, mejor = null, mejorScore = Infinity;
+    for (var i = 0; i < nombres.length; i++) {
+      var original = nombres[i];
+      var n = normalizarTexto(original);
+      if (!n) continue;
+      if (n === t) { exacto = original; break; }
+      if (!sub && (n.indexOf(t) >= 0 || t.indexOf(n) >= 0)) { sub = original; continue; }
+      var dist = levenshtein(t, n);
+      var umbral = Math.max(1, Math.floor(n.length * 0.25));
+      if (dist <= umbral && dist < mejorScore) { mejor = original; mejorScore = dist; }
+    }
+    return exacto || sub || mejor || null;
   }
 
   function apiBuscarTerritorio(texto) {
@@ -5815,40 +5892,29 @@
       }
     }
     var t = normalizarTexto(texto);
-    var deptos = (D.departamentos_puntos || []).map(function (d) { return d.nombre; });
-    var depto = deptos.find(function (d) { return t.indexOf(normalizarTexto(d)) >= 0; });
-    if (depto) {
-      apiResaltarDepto(depto);
-      return { tipo: "departamento", nombre: prettyDepto(depto) };
+    // Departamentos y municipios: misma función central con coincidencia flexible.
+    var deptoNombre = buscarCoincidencia(t, (D.departamentos_puntos || []).map(function (d) { return d.nombre; }));
+    if (deptoNombre) {
+      apiResaltarDepto(deptoNombre);
+      return { tipo: "departamento", nombre: prettyDepto(deptoNombre) };
     }
-    // Municipio: volar a su polígono y resaltarlo (stroke/fill temporal).
-    var muni = (D.municipios || []).find(function (mu) {
-      return t.indexOf(normalizarTexto(mu.nombre)) >= 0;
-    });
-    if (muni) {
-      highlightGroup.clearLayers();
-      var muniFeat = ((D.municipios_geo && D.municipios_geo.features) || []).find(function (f) {
-        return normalizarTexto((f.properties || {}).nombre) === normalizarTexto(muni.nombre);
-      });
-      if (muniFeat) {
-        try {
-          var capa = L.geoJSON(sinPuntos(muniFeat), {
-            style: { color: "#ffd166", weight: 3, opacity: 0.95, fillColor: "#ff8a3c", fillOpacity: 0.35 },
-          });
-          capa.addTo(highlightGroup);
-          if (!map.hasLayer(highlightGroup)) highlightGroup.addTo(map);
-          var b = capa.getBounds();
-          if (b && b.isValid()) map.flyToBounds(b, { padding: [40, 40], duration: 1.3 });
-        } catch (e) {
+    var muniNombre = buscarCoincidencia(t, (D.municipios || []).map(function (mu) { return mu.nombre; }));
+    if (muniNombre) {
+      var muni = (D.municipios || []).find(function (mu) { return normalizarTexto(mu.nombre) === normalizarTexto(muniNombre); });
+      if (muni) {
+        var muniFeat = ((D.municipios_geo && D.municipios_geo.features) || []).find(function (f) {
+          return normalizarTexto((f.properties || {}).nombre) === normalizarTexto(muni.nombre);
+        });
+        if (muniFeat) {
+          resaltarTerritorio("municipio", muni.nombre, muniFeat);
+        } else {
+          highlightGroup.clearLayers();
           map.flyTo([muni.lat, muni.lon], 11, { duration: 1.2 });
+          L.circleMarker([muni.lat, muni.lon], { radius: 8, color: "#facc15", weight: 2, fillColor: "#facc15", fillOpacity: 1 }).addTo(highlightGroup);
+          if (!map.hasLayer(highlightGroup)) highlightGroup.addTo(map);
         }
-      } else {
-        map.flyTo([muni.lat, muni.lon], 11, { duration: 1.2 });
-        L.circleMarker([muni.lat, muni.lon], { radius: 8, color: "#fff", weight: 2, fillColor: "#f59e0b", fillOpacity: 1 }).addTo(highlightGroup);
-        if (!map.hasLayer(highlightGroup)) highlightGroup.addTo(map);
+        return { tipo: "municipio", nombre: muni.nombre + (muni.depto ? " · " + prettyDepto(muni.depto) : "") };
       }
-      setTimeout(function () { highlightGroup.clearLayers(); }, 6000);
-      return { tipo: "municipio", nombre: muni.nombre + (muni.depto ? " · " + prettyDepto(muni.depto) : "") };
     }
     apiBuscar(texto);
     return { tipo: "busqueda", nombre: texto };
@@ -5870,15 +5936,42 @@
       if (isFinite(lat) && isFinite(lon)) return { lat: lat, lon: lon, nombre: lat.toFixed(3) + ", " + lon.toFixed(3) };
     }
     var t = normalizarTexto(texto);
-    var depto = (D.departamentos_puntos || []).find(function (d) {
-      return t.indexOf(normalizarTexto(d.nombre)) >= 0;
-    });
-    if (depto) return { lat: depto.lat, lon: depto.lon, nombre: prettyDepto(depto.nombre) };
-    var muni = (D.municipios || []).find(function (mu) {
-      return t.indexOf(normalizarTexto(mu.nombre)) >= 0;
-    });
-    if (muni) return { lat: muni.lat, lon: muni.lon, nombre: muni.nombre + (muni.depto ? " · " + prettyDepto(muni.depto) : "") };
+    var deptoNombre = buscarCoincidencia(t, (D.departamentos_puntos || []).map(function (d) { return d.nombre; }));
+    if (deptoNombre) {
+      var depto = (D.departamentos_puntos || []).find(function (d) { return normalizarTexto(d.nombre) === normalizarTexto(deptoNombre); });
+      if (depto) return { lat: depto.lat, lon: depto.lon, nombre: prettyDepto(depto.nombre) };
+    }
+    var muniNombre = buscarCoincidencia(t, (D.municipios || []).map(function (mu) { return mu.nombre; }));
+    if (muniNombre) {
+      var muni = (D.municipios || []).find(function (mu) { return normalizarTexto(mu.nombre) === normalizarTexto(muniNombre); });
+      if (muni) return { lat: muni.lat, lon: muni.lon, nombre: muni.nombre + (muni.depto ? " · " + prettyDepto(muni.depto) : "") };
+    }
     return null;
+  }
+
+  // Autocompletado: devuelve lugares (departamentos y municipios) que coinciden
+  // de forma flexible con el texto, para los campos de Origen/Destino de la ruta.
+  function buscarLugares(texto, limite) {
+    var t = normalizarTexto(texto);
+    var out = [];
+    var lim = limite || 8;
+    if (!t) return out;
+    function empujar(nombre, lat, lon, tipo, depto) {
+      out.push({ nombre: nombre, lat: lat, lon: lon, tipo: tipo, depto: depto || "" });
+    }
+    (D.departamentos_puntos || []).forEach(function (d) {
+      var n = normalizarTexto(d.nombre);
+      if (n && (n.indexOf(t) >= 0 || levenshtein(t, n) <= Math.max(1, Math.floor(n.length * 0.25)))) {
+        empujar(prettyDepto(d.nombre), d.lat, d.lon, "Departamento");
+      }
+    });
+    (D.municipios || []).forEach(function (mu) {
+      var n = normalizarTexto(mu.nombre);
+      if (n && (n.indexOf(t) >= 0 || levenshtein(t, n) <= Math.max(1, Math.floor(n.length * 0.25)))) {
+        empujar(mu.nombre, mu.lat, mu.lon, "Municipio", mu.depto || "");
+      }
+    });
+    return out.slice(0, lim);
   }
 
   window.VisorAPI = {
@@ -5946,6 +6039,24 @@
         totalQuemadas: (D.quemadas || []).length,
         ensoActivo: ensoActivo,
         ensoIntensidad: ensoIntensidad,
+      };
+    },
+    getCapasActivas: function () {
+      var cifras = {
+        anio: state.year == null ? "todos los años" : state.year,
+        focos: focosDeAnio(state.year).length,
+        quemadas: quemadasDeAnio(state.year).length,
+        areas: (D.areas_puntos || []).length,
+        deptos: (D.departamentos_puntos || []).length,
+        municipios: (D.municipios || []).length,
+        ensoActivo: ensoActivo,
+        ensoIntensidad: ensoIntensidad,
+      };
+      return {
+        capas: LAYERS.filter(function (l) { return l.available && capaActiva(l.id); }).map(function (l) {
+          return { id: l.id, name: l.name, desc: l.desc, kind: l.kind, color: l.color };
+        }),
+        cifras: cifras,
       };
     },
     listaCapas: LAYERS.map(function (l) { return { id: l.id, name: l.name }; }),

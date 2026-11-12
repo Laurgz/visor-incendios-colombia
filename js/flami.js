@@ -34,7 +34,35 @@
 
   // Normaliza acentos y mayúsculas para que el NLU entienda "Boyacá" == "boyaca".
   function normalizar(s) {
-    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+  }
+
+  // Distancia de Levenshtein para tolerar errores ortográficos en comandos.
+  function levenshtein(a, b) {
+    if (a === b) return 0;
+    var m = a.length, n = b.length;
+    if (!m) return n;
+    if (!n) return m;
+    var d = [];
+    for (var i = 0; i <= m; i++) { d[i] = [i]; }
+    for (var j = 0; j <= n; j++) { d[0][j] = j; }
+    for (var i = 1; i <= m; i++) {
+      for (var j = 1; j <= n; j++) {
+        var cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+      }
+    }
+    return d[m][n];
+  }
+
+  // Coincidencia flexible de una palabra clave dentro del texto normalizado.
+  function fuzzyPalabra(texto, palabra) {
+    var t = normalizar(texto);
+    var p = normalizar(palabra);
+    if (!t || !p) return false;
+    if (t.indexOf(p) >= 0) return true;
+    var umbral = Math.max(1, Math.floor(p.length * 0.3));
+    return levenshtein(t, p) <= umbral;
   }
 
   function esc(s) {
@@ -473,32 +501,39 @@
       }
     }
 
-    // Ruteo interactivo por voz.
-    if (/ruta|trayecto|como llego|cómo llego|como llegar|cómo llegar|calcular ruta|llevame|llévame|llevala|llévala/.test(t)) {
+    // Ruteo interactivo por voz (siempre conduciendo en vehículo).
+    if (/ruta|trayecto|trazar|traza|como llego|cómo llego|como llegar|cómo llegar|calcular ruta|llevame|llévame|llevala|llévala/.test(t)) {
       if (!API) return { texto: "No puedo calcular rutas ahora." };
-      // Perfil de ruta por voz.
-      if (/a pie|caminando|andando/.test(t)) API.setRouteProfile("foot");
-      else if (/bicicleta|bici|en bici|cicla/.test(t)) API.setRouteProfile("bike");
-      else if (/carro|coche|conduciendo|manejando|en auto|en carro/.test(t)) API.setRouteProfile("driving");
 
       // Foco más cercano.
       if (/foco mas cercano|foco más cercano|incendio mas cercano|incendio más cercano/.test(t)) {
         var ok = API.rutaAlFocoCercano();
         if (!ok) brillarBotonUbicacion();
-        return { texto: ok ? "Calculando la ruta al foco más cercano." : "No pude calcular la ruta. Activa tu ubicación del visor." };
+        return { texto: ok ? "Calculando la ruta al foco más cercano, conduciendo en vehículo." : "No pude calcular la ruta. Activa tu ubicación del visor." };
       }
 
-      // Destino específico (departamento/municipio/coordenadas).
-      var objetivo = t.replace(/ruta|trayecto|como llego|cómo llego|como llegar|cómo llegar|calcular ruta|llevame|llévame|llevala|llévala|hasta|a la|al |hacia/g, " ").replace(/\s+/g, " ").trim();
+      // Ruta completa: "Ruta desde [Origen] hasta [Destino]".
+      var desdeHasta = t.match(/(?:desde|de)\s+(.+?)\s+(?:hasta|a|al)\s+(.+)/);
+      if (desdeHasta && API.obtenerCoordenadas && API.calcularRuta) {
+        var origen = API.obtenerCoordenadas(desdeHasta[1]);
+        var destino = API.obtenerCoordenadas(desdeHasta[2]);
+        if (origen && destino) {
+          API.calcularRuta(origen, destino, "driving");
+          return { texto: "Trazando la ruta conduciendo en vehículo desde " + origen.nombre + " hasta " + destino.nombre + "." };
+        }
+      }
+
+      // Destino específico (origen = tu ubicación GPS).
+      var objetivo = t.replace(/ruta|trayecto|trazar|traza|como llego|cómo llego|como llegar|cómo llegar|calcular ruta|llevame|llévame|llevala|llévala|hasta|a la|al |hacia/g, " ").replace(/\s+/g, " ").trim();
       if (objetivo && API.obtenerCoordenadas) {
         var dest = API.obtenerCoordenadas(objetivo);
         if (dest && API.rutaDesdeGps) {
-          var r = API.rutaDesdeGps({ lat: dest.lat, lon: dest.lon });
+          var r = API.rutaDesdeGps({ lat: dest.lat, lon: dest.lon }, "driving");
           if (!r) brillarBotonUbicacion();
-          return { texto: r ? "Calculando la ruta hasta " + dest.nombre + "." : "Por favor, activa la ubicación del visor (en la barra superior de la página web) para poder calcular la ruta desde donde estás." };
+          return { texto: r ? "Trazando la ruta conduciendo en vehículo hasta " + dest.nombre + ". La distancia y el tiempo corresponden a un trayecto en carro." : "Por favor, activa la ubicación del visor (en la barra superior de la página web) para poder calcular la ruta desde donde estás." };
         }
       }
-      return { texto: "Abre el panel de ruta y elige origen y destino, o dime 'ruta al foco más cercano'." };
+      return { texto: "Abre el panel de ruta, escribe el origen y el destino, o dime 'ruta al foco más cercano'." };
     }
 
     // mapa base
@@ -523,6 +558,27 @@
           if (res && res.nombre) return { texto: "Enfocando " + res.nombre + " en el mapa." };
         }
       }
+    }
+
+    // Reporte de capas activas (con tolerancia ortográfica).
+    if (/reporte de capas|reporte capas|que capas|qué capas|capas activas|capas hay|explica el mapa|explicame el mapa|explícame el mapa|que hay en el mapa|qué hay en el mapa|describe el mapa|que se ve en el mapa|qué se ve en el mapa|dime las capas/.test(t)) {
+      if (!API || !API.getCapasActivas) return { texto: "No pude analizar las capas en este momento." };
+      var infoCapas = API.getCapasActivas();
+      var capas = infoCapas.capas || [];
+      var cifras = infoCapas.cifras || {};
+      if (!capas.length) {
+        return { texto: "No tienes capas activas en este momento. Activa alguna capa desde el panel 'Capas visibles' y pídeme de nuevo el reporte." };
+      }
+      var partes = ["Tienes " + capas.length + " capa" + (capas.length === 1 ? "" : "s") + " activa" + (capas.length === 1 ? "" : "s") + " en el mapa para el año " + cifras.anio + "."];
+      capas.forEach(function (c) {
+        partes.push(c.name + ": " + (CAPA_INFO[c.id] || c.desc || "capa temática del visor."));
+      });
+      if (capas.some(function (c) { return c.id === "focos"; })) partes.push("Ahora mismo hay " + cifras.focos + " focos de calor en la vista.");
+      if (capas.some(function (c) { return c.id === "quemadas"; })) partes.push("Hay " + cifras.quemadas + " áreas quemadas.");
+      if (capas.some(function (c) { return c.id === "areas"; })) partes.push("Hay " + cifras.areas + " áreas protegidas.");
+      if (capas.some(function (c) { return c.id === "deptos"; })) partes.push("Se muestran " + cifras.deptos + " departamentos.");
+      if (cifras.ensoActivo || capas.some(function (c) { return c.id === "enso"; })) partes.push("El contexto de El Niño está activo con intensidad " + cifras.ensoIntensidad + ".");
+      return { texto: partes.join(" ") };
     }
 
     // conocimiento técnico
@@ -566,15 +622,36 @@
     "lst": ["temperatura", "temperatura superficial", "lst", "termica", "térmica", "termico", "térmico"],
   };
 
+  // Descripción, significado de colores/simbología y utilidad de cada capa.
+  var CAPA_INFO = {
+    "focos": "los focos de calor detectados por satélite (NASA FIRMS). Los puntos más grandes y rojos indican mayor potencia radiativa (FRP), es decir, incendios más intensos.",
+    "quemadas": "las áreas quemadas (cicatrices de incendios) del año. El color naranja delimita la superficie que fue afectada por el fuego.",
+    "susceptibilidad": "el mapa de susceptibilidad a incendios calculado con Random Forest. El gradiente va de verde (probabilidad baja) a amarillo y rojo (probabilidad alta de incendio).",
+    "bosques": "la cobertura de bosques (ESA WorldCover). El verde representa las zonas boscosas de referencia.",
+    "agua": "las fuentes hídricas: ríos, lagos y cuerpos de agua. El azul marca el agua superficial.",
+    "areas": "las áreas protegidas (RUNAP / Parques Nacionales). El color violeta delimita los parques y reservas naturales.",
+    "deptos": "los límites departamentales de Colombia, que sirven como capa base de referencia.",
+    "enso": "la re-ponderación climática por el fenómeno de El Niño. Las anomalías de sequía y calentamiento aumentan la amenaza de incendios; a mayor intensidad (moderado o severo), mayor es el riesgo.",
+    "lst": "la temperatura superficial (LST) de MODIS. Los tonos fríos (azules y verdes) indican temperaturas bajas, y los tonos cálidos (amarillos y rojos) indican altas temperaturas, mayor sequedad y más riesgo de incendio.",
+  };
+
   function encontrarCapa(texto) {
     var API = window.VisorAPI;
     if (!API || !API.listaCapas) return null;
     var t = normalizar(texto);
+    var palabras = t.split(/\s+/);
     for (var i = 0; i < API.listaCapas.length; i++) {
       var capa = API.listaCapas[i];
       var aliases = CAPA_ALIASES[capa.id] || [capa.name.toLowerCase()];
       for (var j = 0; j < aliases.length; j++) {
-        if (t.indexOf(normalizar(aliases[j])) >= 0) return capa;
+        var a = normalizar(aliases[j]);
+        if (!a) continue;
+        if (t.indexOf(a) >= 0) return capa;
+        // Coincidencia flexible por palabra (tolera errores como "focs" -> "focos").
+        var umbral = Math.max(1, Math.floor(a.length * 0.25));
+        for (var k = 0; k < palabras.length; k++) {
+          if (levenshtein(palabras[k], a) <= umbral) return capa;
+        }
       }
     }
     return null;
@@ -619,12 +696,12 @@
   var COMANDOS_GUIA = [
     { categoria: "Saludos", comandos: ["Hola Flami", "¿Cómo estás?", "¿Quién eres?", "Gracias"] },
     { categoria: "Despedida", comandos: ["Adiós Flami", "Chao Flami"] },
-    { categoria: "Reporte", comandos: ["Dame el reporte de hoy", "Haz un resumen de incendios"] },
+    { categoria: "Reporte", comandos: ["Dame el reporte de hoy", "Haz un resumen de incendios", "Dame un reporte de las capas activas"] },
     { categoria: "El Niño y clima", comandos: ["Activa fenómeno Niño", "Activa El Niño severo", "Apaga fenómeno Niño", "Enciende temperatura"] },
     { categoria: "Capas", comandos: ["Activa focos 2020", "Apaga bosques", "Activa susceptibilidad", "Activa agua", "Todas las capas", "Ninguna capa"] },
     { categoria: "Tiempo", comandos: ["Pon el año 2020", "Reproduce la animación"] },
     { categoria: "GPS y foco", comandos: ["Mi ubicación", "Foco más cercano"] },
-    { categoria: "Ruteo", comandos: ["Traza ruta a Yopal", "Ruta a pie al foco más cercano", "Ruta en bicicleta hasta Boyacá", "Detén la ruta"] },
+    { categoria: "Ruteo", comandos: ["Traza ruta a Yopal", "Ruta desde Bogotá hasta Yopal", "Cómo llegar a Yopal", "Detén la ruta"] },
     { categoria: "Mapa base", comandos: ["Vista satelital", "Mapa de calles"] },
     { categoria: "Centro de estudio", comandos: ["Abre el centro de estudio", "Cierra el centro de estudio"] },
     { categoria: "Exportar", comandos: ["Realiza informe", "Exporta mapa JPG"] },
